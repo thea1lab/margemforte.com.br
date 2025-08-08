@@ -21,6 +21,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { InlineMath, BlockMath } from 'react-katex'
+import { toast } from '@/components/ui/sonner'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 interface CalculationResult {
   totalCost: number
@@ -32,6 +34,8 @@ interface CalculationResult {
 }
 
 export const MarginCalculator = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [inputs, setInputs] = useState({
     serviceValue: '',
     travelCosts: '',
@@ -44,6 +48,18 @@ export const MarginCalculator = () => {
   const [result, setResult] = useState<CalculationResult | null>(null)
   const [hasEdited, setHasEdited] = useState(false)
   const [simulationName, setSimulationName] = useState('')
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [hasSavedOnce, setHasSavedOnce] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [simulationId, setSimulationId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const id = params.get('id')
+    if (id) setSimulationId(id)
+  }, [location.search])
 
   const formatCurrency = (value: string): string => {
     const numericValue = value.replace(/\D/g, '')
@@ -67,6 +83,7 @@ export const MarginCalculator = () => {
       setInputs(prev => ({ ...prev, [field]: value }))
     }
     if (!hasEdited) setHasEdited(true)
+    if (hasSavedOnce && !hasUnsavedChanges) setHasUnsavedChanges(true)
   }
 
   const calculateMargin = (): CalculationResult => {
@@ -153,6 +170,59 @@ export const MarginCalculator = () => {
       desiredMargin: '20'
     })
     setHasEdited(false)
+    setSimulationName('')
+    setNameError(null)
+    setHasUnsavedChanges(false)
+    setHasSavedOnce(false)
+    setSimulationId(null)
+    navigate('/', { replace: true })
+  }
+
+  const handleSave = async () => {
+    if (!result) return
+    if (!simulationName.trim()) {
+      setNameError('Campo obrigatório')
+      const el = document.getElementById('simulationName') as HTMLInputElement | null
+      el?.focus()
+      return
+    }
+    try {
+      setIsSaving(true)
+      const { saveCalculatorHistory, updateCalculatorHistory } = await import('@/integrations/supabase/calculatorHistory')
+      const payload = {
+        simulation_name: simulationName || 'Simulação sem nome',
+        service_value: parseCurrency(inputs.serviceValue),
+        travel_costs: parseCurrency(inputs.travelCosts),
+        hours_worked: Number(inputs.hoursWorked) || 0,
+        hourly_rate: parseCurrency(inputs.hourlyRate),
+        materials: parseCurrency(inputs.materials),
+        desired_margin: Math.min(100, Math.max(0, Number(inputs.desiredMargin) || 0))
+      }
+
+      let saved
+      if (simulationId) {
+        saved = await updateCalculatorHistory(simulationId, payload)
+      } else {
+        saved = await saveCalculatorHistory(payload)
+        if (saved?.id) {
+          const params = new URLSearchParams(location.search)
+          params.set('id', saved.id)
+          navigate({ pathname: location.pathname, search: params.toString() }, { replace: true })
+          setSimulationId(saved.id)
+        }
+      }
+      toast.success('Simulação salva com sucesso', {
+        description: simulationName || 'A simulação foi salva no histórico.'
+      })
+      setHasSavedOnce(true)
+      setHasUnsavedChanges(false)
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err)
+      toast.error('Não foi possível salvar', { description: 'Tente novamente em instantes.' })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const MarginPreset = ({ value }: { value: number }) => (
@@ -218,7 +288,7 @@ export const MarginCalculator = () => {
       {helpText && (
         <span id={`${id}-desc`} className="sr-only">{helpText}</span>
       )}
-      {belowNode && <div className="mt-1">{belowNode}</div>}
+      {belowNode && <div className="mt-[-3px]">{belowNode}</div>}
     </div>
   )
 
@@ -474,72 +544,98 @@ export const MarginCalculator = () => {
             </div>
 
 
-            <div className="p-4 border rounded-lg bg-muted/30">
-              <p className="text-sm font-medium mb-3">Detalhes do cálculo</p>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">1) Custo total</p>
-                  <p className="mb-1">Objetivo: somar todos os custos do serviço (sem lucro).</p>
-                  <BlockMath>{String.raw`\text{Custo total} = \text{Deslocamento} + (\text{Horas} \times \text{R\$/h}) + \text{Materiais}`}</BlockMath>
-                  <p className="font-mono">
-                    {formatBRL(parseCurrency(inputs.travelCosts))} + ({Number(inputs.hoursWorked) || 0} × {formatBRL(parseCurrency(inputs.hourlyRate))}) + {formatBRL(parseCurrency(inputs.materials))} = <span className="font-bold">{formatBRL(result.totalCost)}</span>
-                  </p>
-                  <p>O que mostra: quanto você gasta para executar o serviço.</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-muted-foreground">2) Preço mínimo com margem desejada</p>
-                  <p className="mb-1">Objetivo: descobrir o menor preço para atingir a margem desejada.</p>
-                  <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
-                  <p className="font-mono">
-                    {formatBRL(result.totalCost)} ÷ (1 − {Number(inputs.desiredMargin) || 0}%) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
-                  </p>
-                  <p>O que mostra: o preço abaixo do qual sua <strong>margem ficará menor</strong> do que a desejada.</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-muted-foreground">3) Sua margem com o valor informado</p>
-                  <p className="mb-1">Objetivo: medir a sua margem real com o preço que você digitou.</p>
-                  <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{\text{Valor do serviço} - \text{Custo total}}{\text{Valor do serviço}} \times 100`}</BlockMath>
-                  <p className="font-mono">
-                    ({formatBRL(serviceValueNumber)} − {formatBRL(result.totalCost)}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{result.actualMargin.toFixed(1)}%</span>
-                  </p>
-                  <p>O que mostra: qual parte do preço é lucro. Se negativo, indica prejuízo.</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-muted-foreground">4) Desconto máximo</p>
-                  <p className="mb-1">Objetivo: saber quanto desconto ainda cabe mantendo a margem desejada.</p>
-                  <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{\text{Valor do serviço} - \text{Preço mínimo}}{\text{Valor do serviço}} \times 100`}</BlockMath>
-                  <p className="font-mono">
-                    ({formatBRL(serviceValueNumber)} − {isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{isFinite(result.maxDiscount) ? result.maxDiscount.toFixed(1) : 'indefinido'}%</span>
-                  </p>
-                  <p>O que mostra: o limite de desconto para não ficar abaixo da margem desejada.</p>
-                </div>
-              </div>
-            </div>
+            <Accordion type="single" collapsible className="p-4 border rounded-lg bg-muted/30">
+              <AccordionItem value="calc-details" className="border-b-0">
+                <AccordionTrigger>Detalhes do cálculo</AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">1) Custo total</p>
+                      <p className="mb-1">Objetivo: somar todos os custos do serviço (sem lucro).</p>
+                      <BlockMath>{String.raw`\text{Custo total} = \text{Deslocamento} + (\text{Horas} \times \text{R\$/h}) + \text{Materiais}`}</BlockMath>
+                      <p className="font-mono">
+                        {formatBRL(parseCurrency(inputs.travelCosts))} + ({Number(inputs.hoursWorked) || 0} × {formatBRL(parseCurrency(inputs.hourlyRate))}) + {formatBRL(parseCurrency(inputs.materials))} = <span className="font-bold">{formatBRL(result.totalCost)}</span>
+                      </p>
+                      <p>O que mostra: quanto você gasta para executar o serviço.</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-muted-foreground">2) Preço mínimo com margem desejada</p>
+                      <p className="mb-1">Objetivo: descobrir o menor preço para atingir a margem desejada.</p>
+                      <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
+                      <p className="font-mono">
+                        {formatBRL(result.totalCost)} ÷ (1 − {Number(inputs.desiredMargin) || 0}%) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
+                      </p>
+                      <p>O que mostra: o preço abaixo do qual sua <strong>margem ficará menor</strong> do que a desejada.</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-muted-foreground">3) Sua margem com o valor informado</p>
+                      <p className="mb-1">Objetivo: medir a sua margem real com o preço que você digitou.</p>
+                      <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{\text{Valor do serviço} - \text{Custo total}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                      <p className="font-mono">
+                        ({formatBRL(serviceValueNumber)} − {formatBRL(result.totalCost)}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{result.actualMargin.toFixed(1)}%</span>
+                      </p>
+                      <p>O que mostra: qual parte do preço é lucro. Se negativo, indica prejuízo.</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-muted-foreground">4) Desconto máximo</p>
+                      <p className="mb-1">Objetivo: saber quanto desconto ainda cabe mantendo a margem desejada.</p>
+                      <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{\text{Valor do serviço} - \text{Preço mínimo}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                      <p className="font-mono">
+                        ({formatBRL(serviceValueNumber)} − {isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{isFinite(result.maxDiscount) ? result.maxDiscount.toFixed(1) : 'indefinido'}%</span>
+                      </p>
+                      <p>O que mostra: o limite de desconto para não ficar abaixo da margem desejada.</p>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
             <div className="max-w-md mx-auto w-full">
-              <Label htmlFor="simulationName" className="text-sm">Nome da simulação</Label>
+              <Label htmlFor="simulationName" className="text-sm">Nome da simulação <span className="text-destructive">*</span></Label>
               <Input
                 id="simulationName"
                 placeholder="Ex.: Orçamento Cliente X"
                 value={simulationName}
-                onChange={(e) => setSimulationName(e.target.value)}
-                className="mt-1"
+                onChange={(e) => {
+                  setSimulationName(e.target.value)
+                  if (nameError && e.target.value.trim()) setNameError(null)
+                  if (hasSavedOnce && !hasUnsavedChanges) {
+                    setHasUnsavedChanges(true)
+                    toast.warning('Alterações não salvas', { description: 'A simulação foi alterada e ainda não está salva.' })
+                  }
+                }}
+                className={`mt-1 ${nameError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                aria-invalid={!!nameError}
+                aria-describedby={nameError ? 'simulationName-error' : undefined}
+                required
               />
+              {nameError && (
+                <p id="simulationName-error" className="text-destructive text-xs mt-1">{nameError}</p>
+              )}
             </div>
 
-            <div className="flex justify-center gap-3 mt-3">
+            <div className="flex flex-col items-center justify-center gap-2 mt-3">
+              {hasUnsavedChanges && (
+                <div className="text-xs text-warning">
+                  A simulação foi alterada e ainda não está salva.
+                </div>
+              )}
+              <div className="flex justify-center gap-3">
               <Button
                 variant="default"
                 size="lg"
                 className="bg-primary hover:bg-primary/90 text-white px-8 flex items-center gap-2"
+                onClick={handleSave}
+                disabled={isSaving || !simulationName.trim()}
               >
                 <Save className="h-4 w-4" />
-                Salvar no Histórico
+                {isSaving ? 'Salvando...' : 'Salvar no Histórico'}
               </Button>
-              <Button variant="outline" size="lg">Nova simulação</Button>
+              <Button variant="outline" size="lg" onClick={resetForm}>Nova simulação</Button>
+              </div>
             </div>
           </CardContent>
         </Card>

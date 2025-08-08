@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      calculator_history: {
+        Row: {
+          id: string
+          created_at: string
+          simulation_name: string
+          service_value: number
+          travel_costs: number
+          hours_worked: number
+          hourly_rate: number
+          materials: number
+          desired_margin: number
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          simulation_name: string
+          service_value: number
+          travel_costs: number
+          hours_worked: number
+          hourly_rate: number
+          materials: number
+          desired_margin: number
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          simulation_name?: string
+          service_value?: number
+          travel_costs?: number
+          hours_worked?: number
+          hourly_rate?: number
+          materials?: number
+          desired_margin?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
