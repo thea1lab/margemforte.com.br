@@ -117,11 +117,12 @@ export default {
 				'slide-up': 'slide-up 0.3s ease-out',
 				'pulse-success': 'pulse-success 2s ease-in-out infinite'
 			},
-			backgroundImage: {
-				'gradient-primary': 'var(--gradient-primary)',
-				'gradient-success': 'var(--gradient-success)',
-				'gradient-field': 'var(--gradient-field)'
-			},
+				backgroundImage: {
+					'gradient-primary': 'var(--gradient-primary)',
+					'gradient-primary-dark': 'var(--gradient-primary-dark)',
+					'gradient-success': 'var(--gradient-success)',
+					'gradient-field': 'var(--gradient-field)'
+				},
 			boxShadow: {
 				'soft': 'var(--shadow-soft)',
 				'medium': 'var(--shadow-medium)',

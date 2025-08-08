@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button-variants'
 import { Input } from '@/components/ui/input'
@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Leaf } from 'lucide-react'
 import logo from '@/assets/logo.png'
+import { useSearchParams } from 'react-router-dom'
 
 const BRAZILIAN_STATES = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
   'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ]
 
@@ -19,7 +20,16 @@ export const AuthForm = () => {
   const { signIn, signUp } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('signin')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(
+    tabParam === 'signup' ? 'signup' : 'signin'
+  )
+
+  useEffect(() => {
+    const urlTab = tabParam === 'signup' ? 'signup' : 'signin'
+    setActiveTab(urlTab)
+  }, [tabParam])
 
   // Sign in form state
   const [signInData, setSignInData] = useState({
@@ -42,7 +52,7 @@ export const AuthForm = () => {
 
     try {
       const { error } = await signIn(signInData.email, signInData.password)
-      
+
       if (error) {
         toast({
           title: "Erro no login",
@@ -87,7 +97,7 @@ export const AuthForm = () => {
         crea_license: signUpData.crea_license || undefined,
         state: signUpData.state || undefined
       })
-      
+
       if (error) {
         toast({
           title: "Erro no cadastro",
@@ -101,6 +111,9 @@ export const AuthForm = () => {
           variant: "default"
         })
         setActiveTab('signin')
+        const newParams = new URLSearchParams(searchParams)
+        newParams.set('tab', 'signin')
+        setSearchParams(newParams)
       }
     } catch (error) {
       toast({
@@ -130,19 +143,28 @@ export const AuthForm = () => {
               {activeTab === 'signin' ? 'Acesse sua conta' : 'Crie sua conta'}
             </CardTitle>
             <CardDescription>
-              {activeTab === 'signin' 
-                ? 'Entre com suas credenciais para continuar' 
+              {activeTab === 'signin'
+                ? 'Entre com suas credenciais para continuar'
                 : 'Comece seu teste grátis de 15 dias'
               }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => {
+                const newTab = value as 'signin' | 'signup'
+                setActiveTab(newTab)
+                const newParams = new URLSearchParams(searchParams)
+                newParams.set('tab', newTab)
+                setSearchParams(newParams)
+              }}
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Cadastrar</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
@@ -167,10 +189,10 @@ export const AuthForm = () => {
                       required
                     />
                   </div>
-                  <Button 
-                    type="submit" 
-                    variant="agricultural" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    variant="agricultural"
+                    size="lg"
                     className="w-full"
                     disabled={loading}
                   >
@@ -179,7 +201,7 @@ export const AuthForm = () => {
                   </Button>
                 </form>
               </TabsContent>
-              
+
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
@@ -241,10 +263,10 @@ export const AuthForm = () => {
                       </Select>
                     </div>
                   </div>
-                  <Button 
-                    type="submit" 
-                    variant="success" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    variant="agricultural"
+                    size="lg"
                     className="w-full"
                     disabled={loading}
                   >
