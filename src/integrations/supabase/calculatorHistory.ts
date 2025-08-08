@@ -52,4 +52,24 @@ export async function listCalculatorHistory() {
   return data
 }
 
+export async function listCalculatorHistoryPaged(params: { page: number; pageSize: number; search?: string }) {
+  const { page, pageSize, search } = params
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  let query = supabase
+    .from('calculator_history')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (search && search.trim()) {
+    query = query.ilike('simulation_name', `%${search.trim()}%`)
+  }
+
+  const { data, error, count } = await query
+  if (error) throw error
+  return { data: data ?? [], count: count ?? 0 }
+}
+
 

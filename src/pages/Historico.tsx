@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button-variants'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Separator } from '@/components/ui/separator'
+import { Input } from '@/components/ui/input'
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
 import { History, ExternalLink, Plus } from 'lucide-react'
 
 type HistoryRow = {
@@ -26,14 +28,28 @@ const Historico = () => {
   const [rows, setRows] = useState<HistoryRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(10)
+  const [total, setTotal] = useState(0)
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(id)
+  }, [search])
 
   useEffect(() => {
     let isCancelled = false
     const load = async () => {
       try {
-        const { listCalculatorHistory } = await import('@/integrations/supabase/calculatorHistory')
-        const data = await listCalculatorHistory()
-        if (!isCancelled) setRows(data || [])
+        setIsLoading(true)
+        const { listCalculatorHistoryPaged } = await import('@/integrations/supabase/calculatorHistory')
+        const { data, count } = await listCalculatorHistoryPaged({ page, pageSize, search: debouncedSearch })
+        if (!isCancelled) {
+          setRows(data || [])
+          setTotal(count || 0)
+        }
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(e)
@@ -44,7 +60,7 @@ const Historico = () => {
     }
     load()
     return () => { isCancelled = true }
-  }, [])
+  }, [page, pageSize, debouncedSearch])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,7 +78,16 @@ const Historico = () => {
 
         <Card className="bg-white rounded-xl shadow-lg">
           <CardHeader>
-            <CardTitle className="text-base">Simulações salvas</CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-base">Simulações salvas</CardTitle>
+              <div className="w-full max-w-xs">
+                <Input
+                  placeholder="Buscar por nome da simulação..."
+                  value={search}
+                  onChange={(e) => { setPage(1); setSearch(e.target.value) }}
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -117,9 +142,33 @@ const Historico = () => {
                 </Table>
               </div>
             )}
-            <Separator className="my-6" />
-            <div className="text-xs text-muted-foreground">
-              Dica: clique em uma linha para abrir a simulação no calculador.
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-xs text-muted-foreground">
+                Dica: clique em uma linha para abrir a simulação no calculador.
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }}
+                      className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <div className="text-xs text-muted-foreground px-2">
+                      Página {page} de {Math.max(1, Math.ceil(total / pageSize))}
+                    </div>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setPage((p) => (p < Math.ceil(total / pageSize) ? p + 1 : p)) }}
+                      className={page >= Math.ceil(total / pageSize) ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           </CardContent>
         </Card>
