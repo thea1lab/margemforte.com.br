@@ -10,7 +10,7 @@ export const Dashboard = () => {
       <Header />
       
       {/* Main Calculator (Full Width) */}
-      <main className="max-w-2xl mx-auto p-6">
+      <main className="max-w-4xl mx-auto p-6">
         <MarginCalculator />
       </main>
     </div>
