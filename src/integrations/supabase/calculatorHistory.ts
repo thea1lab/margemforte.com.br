@@ -31,4 +31,25 @@ export async function updateCalculatorHistory(id: string, data: Partial<Calculat
   return { id }
 }
 
+export async function getCalculatorHistoryById(id: string) {
+  const { data, error } = await supabase
+    .from('calculator_history')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function listCalculatorHistory() {
+  const { data, error } = await supabase
+    .from('calculator_history')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
 

@@ -61,6 +61,38 @@ export const MarginCalculator = () => {
     if (id) setSimulationId(id)
   }, [location.search])
 
+  useEffect(() => {
+    if (!simulationId) return
+    let isCancelled = false
+    const loadSimulation = async () => {
+      try {
+        const { getCalculatorHistoryById } = await import('@/integrations/supabase/calculatorHistory')
+        const data = await getCalculatorHistoryById(simulationId)
+        if (isCancelled || !data) return
+        setSimulationName(data.simulation_name ?? '')
+        setInputs({
+          serviceValue: formatNumberToInput(data.service_value ?? 0),
+          travelCosts: formatNumberToInput(data.travel_costs ?? 0),
+          hoursWorked: String(data.hours_worked ?? ''),
+          hourlyRate: formatNumberToInput(data.hourly_rate ?? 0),
+          materials: formatNumberToInput(data.materials ?? 0),
+          desiredMargin: String(data.desired_margin ?? '20')
+        })
+        setHasEdited(false)
+        setHasSavedOnce(true)
+        setHasUnsavedChanges(false)
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(err)
+        toast.error('Não foi possível carregar a simulação', {
+          description: 'Verifique o link ou tente novamente.'
+        })
+      }
+    }
+    loadSimulation()
+    return () => { isCancelled = true }
+  }, [simulationId])
+
   const formatCurrency = (value: string): string => {
     const numericValue = value.replace(/\D/g, '')
     const formattedValue = new Intl.NumberFormat('pt-BR', {
@@ -73,6 +105,14 @@ export const MarginCalculator = () => {
 
   const parseCurrency = (value: string): number => {
     return Number(value.replace(/\D/g, '')) / 100
+  }
+
+  const formatNumberToInput = (value: number): string => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'decimal',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Number(value) || 0)
   }
 
   const handleInputChange = (field: string, value: string) => {
