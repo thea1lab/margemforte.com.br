@@ -134,7 +134,7 @@ export const AuthForm = () => {
             <img src={logo} alt="Margem Forte" className="w-16 h-16" />
           </div>
           <h1 className="text-3xl font-bold text-primary mb-2">Margem Forte</h1>
-          <p className="text-muted-foreground">Calculadora profissional de margem para consultores agrícolas</p>
+          <p className="text-muted-foreground">Calculadora profissional de margem para consultores agrícolas e profissionais de vendas</p>
         </div>
 
         <Card className="shadow-strong">

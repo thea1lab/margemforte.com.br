@@ -130,7 +130,7 @@ const Historico = () => {
                               size="sm"
                               className="inline-flex items-center gap-2"
                               onClick={(e) => { e.stopPropagation(); navigate(`/?id=${r.id}`) }}
-                              aria-label="Abrir no calculador"
+                              aria-label="Abrir Simulação"
                             >
                               <ExternalLink className="h-4 w-4" /> Abrir
                             </Button>
@@ -144,7 +144,7 @@ const Historico = () => {
             )}
             <div className="flex items-center justify-between mt-6">
               <div className="text-xs text-muted-foreground">
-                Dica: clique em uma linha para abrir a simulação no calculador.
+                Dica: clique em uma linha para abrir a simulação.
               </div>
               <Pagination>
                 <PaginationContent>

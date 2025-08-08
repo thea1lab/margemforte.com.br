@@ -387,8 +387,22 @@ export const MarginCalculator = () => {
     <div className="space-y-6 mx-auto scroll-smooth">
       <Card className="bg-white rounded-xl shadow-lg p-6 md:p-8">
         <CardHeader className="pb-12 text-center">
-          <CardTitle className="text-primary text-2xl">Calculadora de Margem</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">Preencha os campos abaixo. O resultado aparece automaticamente.</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-[1.45] md:leading-[1.35] overflow-visible">
+            <span className="inline-flex items-baseline gap-3 overflow-visible">
+              <Calculator className="h-7 w-7 text-primary" />
+              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-block leading-[inherit] pb-[2px] overflow-visible whitespace-nowrap">
+                Calculadora de Margem
+              </span>
+            </span>
+          </h2>
+          <p className="text-sm md:text-base text-muted-foreground mt-2">
+            Preencha os campos e veja seus números em tempo real.
+          </p>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <Badge variant="secondary" className="text-[11px]">Tempo real</Badge>
+            <Badge variant="secondary" className="text-[11px]">Fácil de usar</Badge>
+            <Badge variant="secondary" className="text-[11px]">Sem planilhas</Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
