@@ -200,6 +200,48 @@ export const MarginCalculator = () => {
     }).format(value)
   }
 
+  // Picks a smaller text size when the number string is very long
+  const getNumberSizeClasses = (text: string): string => {
+    const length = text.replace(/[\s\u00A0]/g, '').length
+    if (length <= 12) return 'text-3xl md:text-3xl'
+    if (length <= 18) return 'text-2xl md:text-2xl'
+    if (length <= 24) return 'text-xl md:text-xl'
+    return 'text-lg md:text-lg'
+  }
+
+  // Same idea but for smaller base sizes used in the second row of values
+  const getSmallNumberSizeClasses = (text: string): string => {
+    const length = text.replace(/[\s\u00A0]/g, '').length
+    if (length <= 12) return 'text-base md:text-lg'
+    if (length <= 18) return 'text-sm md:text-base'
+    if (length <= 24) return 'text-xs md:text-sm'
+    return 'text-[10px] md:text-xs'
+  }
+
+  // Render text with <wbr> soft-break hints after thousand separators and before '%'
+  const renderBreakable = (text: string): JSX.Element => {
+    const dotParts = text.split('.')
+    const nodes: Array<string | JSX.Element> = []
+    dotParts.forEach((segment, idx) => {
+      if (idx > 0) {
+        nodes.push('.')
+        nodes.push(<wbr key={`w-dot-${idx}`} />)
+      }
+      const pctIndex = segment.indexOf('%')
+      if (pctIndex >= 0) {
+        const before = segment.slice(0, pctIndex)
+        const after = segment.slice(pctIndex + 1)
+        if (before) nodes.push(before)
+        nodes.push(<wbr key={`w-pct-${idx}`} />)
+        nodes.push('%')
+        if (after) nodes.push(after)
+      } else {
+        nodes.push(segment)
+      }
+    })
+    return <>{nodes}</>
+  }
+
   const resetForm = () => {
     setInputs({
       serviceValue: '',
@@ -382,6 +424,36 @@ export const MarginCalculator = () => {
 
   const serviceValueNumber = parseCurrency(inputs.serviceValue)
   const totalCostNumber = (parseCurrency(inputs.travelCosts) + parseCurrency(inputs.materials) + (Number(inputs.hoursWorked) || 0) * parseCurrency(inputs.hourlyRate))
+  const minimumPriceDisplay = result && isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : ''
+  const minPriceTextClass = minimumPriceDisplay ? getNumberSizeClasses(minimumPriceDisplay) : 'text-3xl md:text-4xl'
+  const actualMarginDisplay = result ? `${result.actualMargin.toFixed(2)}%` : ''
+  const actualMarginTextClass = actualMarginDisplay ? getNumberSizeClasses(actualMarginDisplay) : 'text-3xl md:text-4xl'
+  const maxDiscountDisplay = result && isFinite(result.maxDiscount) ? `${Math.max(0, result.maxDiscount).toFixed(2)}%` : ''
+  const maxDiscountTextClass = maxDiscountDisplay ? getNumberSizeClasses(maxDiscountDisplay) : 'text-3xl md:text-4xl'
+
+  const revenueDisplay = result ? formatBRL((Math.max(result.actualMargin, 0) / 100) * serviceValueNumber) : ''
+  const revenueTextClass = revenueDisplay ? getSmallNumberSizeClasses(revenueDisplay) : 'text-base md:text-lg'
+  const totalCostDisplay = result ? formatBRL(result.totalCost) : ''
+  const totalCostTextClass = totalCostDisplay ? getSmallNumberSizeClasses(totalCostDisplay) : 'text-base md:text-lg'
+  const serviceValueDisplay = result ? formatBRL(serviceValueNumber) : ''
+  const serviceValueTextClass = serviceValueDisplay ? getSmallNumberSizeClasses(serviceValueDisplay) : 'text-base md:text-lg'
+
+  const minPriceBreakable = minimumPriceDisplay ? renderBreakable(minimumPriceDisplay) : null
+  const actualMarginBreakable = actualMarginDisplay ? renderBreakable(actualMarginDisplay) : null
+  const maxDiscountBreakable = maxDiscountDisplay ? renderBreakable(maxDiscountDisplay) : null
+  const revenueBreakable = revenueDisplay ? renderBreakable(revenueDisplay) : null
+  const totalCostBreakable = totalCostDisplay ? renderBreakable(totalCostDisplay) : null
+  const serviceValueBreakable = serviceValueDisplay ? renderBreakable(serviceValueDisplay) : null
+
+  // Breakable values for the right info panel (Deslocamento/Materiais/Horas x R$/h/Custo total)
+  const travelCostsDisplay = formatBRL(parseCurrency(inputs.travelCosts))
+  const travelCostsBreakable = renderBreakable(travelCostsDisplay)
+  const materialsDisplay = formatBRL(parseCurrency(inputs.materials))
+  const materialsBreakable = renderBreakable(materialsDisplay)
+  const hoursTimesRateDisplay = `${Number(inputs.hoursWorked) || 0} x ${formatBRL(parseCurrency(inputs.hourlyRate))}`
+  const hoursTimesRateBreakable = renderBreakable(hoursTimesRateDisplay)
+  const totalCostPanelDisplay = formatBRL(totalCostNumber)
+  const totalCostPanelBreakable = renderBreakable(totalCostPanelDisplay)
 
   return (
     <div className="space-y-6 mx-auto scroll-smooth">
@@ -415,10 +487,7 @@ export const MarginCalculator = () => {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />,
                 '0,00',
                 'h-12 text-lg',
-                'Preço que você pretende cobrar do cliente por este serviço.',
-                hasEdited && serviceValueNumber > 0 && serviceValueNumber < totalCostNumber
-                  ? <span className="text-destructive text-xs">Valor do serviço está abaixo do custo total.</span>
-                  : undefined
+                'Preço que você pretende cobrar do cliente por este serviço.'
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -511,11 +580,23 @@ export const MarginCalculator = () => {
               <p className="text-xs text-muted-foreground">Recomendado: 30% a 50%.</p>
               <Separator />
               <div className="text-sm space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Deslocamento</span><span className="font-medium">{formatBRL(parseCurrency(inputs.travelCosts))}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Materiais</span><span className="font-medium">{formatBRL(parseCurrency(inputs.materials))}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Horas x R$/h</span><span>{(Number(inputs.hoursWorked) || 0)} x {formatBRL(parseCurrency(inputs.hourlyRate))}</span></div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Deslocamento</span>
+                  <span className="font-medium break-words whitespace-normal text-right">{travelCostsBreakable}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Materiais</span>
+                  <span className="font-medium break-words whitespace-normal text-right">{materialsBreakable}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Horas x R$/h</span>
+                  <span className="break-words whitespace-normal text-right">{hoursTimesRateBreakable}</span>
+                </div>
                 <Separator />
-                <div className="flex justify-between font-medium"><span className="text-muted-foreground">Custo total</span><span className="font-semibold">{formatBRL(totalCostNumber)}</span></div>
+                <div className="flex justify-between font-medium gap-3">
+                  <span className="text-muted-foreground">Custo total</span>
+                  <span className="font-semibold break-words whitespace-normal text-right">{totalCostPanelBreakable}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -555,14 +636,17 @@ export const MarginCalculator = () => {
               {/* Row 2: values */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border mt-0">
                 <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className="text-3xl md:text-4xl font-extrabold text-primary">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
+                  <span className={`${minPriceTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>{isFinite(result.minimumPrice) ? minPriceBreakable : 'indefinido'}</span>
                 </div>
                 <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className={`text-3xl md:text-4xl font-extrabold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'
-                    }`}>{result.actualMargin.toFixed(2)}%</span>
+                  <span className={`${actualMarginTextClass} font-extrabold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'} break-words text-balance whitespace-normal`}>
+                    {actualMarginBreakable}
+                  </span>
                 </div>
                 <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className="text-3xl md:text-4xl font-extrabold text-primary">{isFinite(result.maxDiscount) ? Math.max(0, result.maxDiscount).toFixed(2) : 'indefinido'}%</span>
+                  <span className={`${maxDiscountTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>
+                    {isFinite(result.maxDiscount) ? maxDiscountBreakable : 'indefinido'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -583,16 +667,15 @@ export const MarginCalculator = () => {
               {/* Row 2: values */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border mt-0">
                 <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className={`text-base md:text-lg font-bold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'
-                    }`}>
-                    {formatBRL((Math.max(result.actualMargin, 0) / 100) * serviceValueNumber)}
+                  <span className={`${revenueTextClass} font-bold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'} break-words whitespace-normal`}>
+                    {revenueBreakable}
                   </span>
                 </div>
                 <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className="text-base md:text-lg font-bold">{formatBRL(result.totalCost)}</span>
+                  <span className={`${totalCostTextClass} font-bold break-words whitespace-normal`}>{totalCostBreakable}</span>
                 </div>
                 <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className="text-base md:text-lg font-bold">{formatBRL(serviceValueNumber)}</span>
+                  <span className={`${serviceValueTextClass} font-bold break-words whitespace-normal`}>{serviceValueBreakable}</span>
                 </div>
               </div>
             </div>
