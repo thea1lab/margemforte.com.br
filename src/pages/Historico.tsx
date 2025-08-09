@@ -4,7 +4,6 @@ import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button-variants'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
 import { History, ExternalLink, Plus } from 'lucide-react'
@@ -65,22 +64,22 @@ const Historico = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main className="max-w-5xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
+      <main className="max-w-5xl mx-auto px-3 sm:p-6 py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div className="hidden sm:flex items-center gap-2">
             <History className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-semibold">Histórico</h2>
           </div>
-          <Button variant="default" onClick={() => navigate('/') } className="flex items-center gap-2">
+          <Button variant="default" onClick={() => navigate('/') } className="w-full sm:w-auto justify-center flex items-center gap-2">
             <Plus className="h-4 w-4" /> Nova simulação
           </Button>
         </div>
 
-        <Card className="bg-white rounded-xl shadow-lg">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
+        <Card className="bg-white rounded-xl shadow-lg p-3 sm:p-6">
+          <CardHeader className="p-0 sm:p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <CardTitle className="text-base">Simulações salvas</CardTitle>
-              <div className="w-full max-w-xs">
+              <div className="w-full md:max-w-xs mb-4 md:mb-0">
                 <Input
                   placeholder="Buscar por nome da simulação..."
                   value={search}
@@ -89,7 +88,7 @@ const Historico = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6">
             {isLoading ? (
               <div className="text-sm text-muted-foreground">Carregando...</div>
             ) : error ? (
@@ -98,15 +97,15 @@ const Historico = () => {
               <div className="text-sm text-muted-foreground">Nenhuma simulação salva ainda.</div>
             ) : (
               <div className="rounded-md border">
-                <Table>
+                <Table className="min-w-[640px] sm:min-w-[720px] md:min-w-0 md:w-full md:table-auto">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead className="hidden md:table-cell">Criado em</TableHead>
-                      <TableHead className="hidden lg:table-cell">Valor do serviço</TableHead>
-                      <TableHead className="hidden lg:table-cell">Custo total</TableHead>
-                      <TableHead className="hidden lg:table-cell">Margem desejada</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead className="md:w-[32%] md:px-3">Nome</TableHead>
+                      <TableHead className="md:w-[18%] md:px-3">Criado em</TableHead>
+                      <TableHead className="md:w-[16%] md:px-3">Valor do serviço</TableHead>
+                      <TableHead className="md:w-[16%] md:px-3">Custo total</TableHead>
+                      <TableHead className="md:w-[7%] md:px-3">Margem</TableHead>
+                      <TableHead className="md:w-[7%] md:px-3 text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -116,15 +115,14 @@ const Historico = () => {
                       const createdFmt = created.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
                       return (
                         <TableRow key={r.id} className="cursor-pointer" onClick={() => navigate(`/?id=${r.id}`)}>
-                          <TableCell>
-                            <div className="font-medium">{r.simulation_name || 'Sem nome'}</div>
-                            <div className="text-xs text-muted-foreground md:hidden">{createdFmt}</div>
+                          <TableCell className="md:w-[32%] md:p-3 align-top">
+                            <div className="font-medium break-words whitespace-normal">{r.simulation_name || 'Sem nome'}</div>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">{createdFmt}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{formatBRL(r.service_value)}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{formatBRL(totalCost)}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{(r.desired_margin ?? 0).toFixed(0)}%</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="md:w-[18%] md:p-3 align-top whitespace-normal">{createdFmt}</TableCell>
+                          <TableCell className="md:w-[16%] md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(r.service_value)}</TableCell>
+                          <TableCell className="md:w-[16%] md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(totalCost)}</TableCell>
+                          <TableCell className="md:w-[7%] md:p-3 align-top break-all whitespace-normal text-right">{(r.desired_margin ?? 0).toFixed(0)}%</TableCell>
+                          <TableCell className="md:w-[7%] md:p-3 align-top text-right">
                             <Button
                               variant="outline"
                               size="sm"
@@ -142,33 +140,35 @@ const Historico = () => {
                 </Table>
               </div>
             )}
-            <div className="flex items-center justify-between mt-6">
+            <div className="mt-3 space-y-3">
               <div className="text-xs text-muted-foreground">
                 Dica: clique em uma linha para abrir a simulação.
               </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }}
-                      className={page === 1 ? 'pointer-events-none opacity-50' : ''}
-                    />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <div className="text-xs text-muted-foreground px-2">
-                      Página {page} de {Math.max(1, Math.ceil(total / pageSize))}
-                    </div>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); setPage((p) => (p < Math.ceil(total / pageSize) ? p + 1 : p)) }}
-                      className={page >= Math.ceil(total / pageSize) ? 'pointer-events-none opacity-50' : ''}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <div className="w-full">
+                <Pagination>
+                  <PaginationContent className="flex flex-nowrap items-center justify-center gap-2">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }}
+                        className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <div className="text-xs text-muted-foreground px-2">
+                        Página {page} de {Math.max(1, Math.ceil(total / pageSize))}
+                      </div>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setPage((p) => (p < Math.ceil(total / pageSize) ? p + 1 : p)) }}
+                        className={page >= Math.ceil(total / pageSize) ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             </div>
           </CardContent>
         </Card>

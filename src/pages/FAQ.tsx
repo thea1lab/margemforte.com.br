@@ -7,12 +7,12 @@ const FAQ = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main className="max-w-4xl mx-auto p-6">
-        <Card className="rounded-xl p-6 bg-white border">
-          <CardHeader className="pb-2">
+      <main className="max-w-4xl mx-auto px-3 sm:p-6 py-6">
+        <Card className="rounded-xl bg-white border p-3 sm:p-6">
+          <CardHeader className="p-0 sm:p-6 pb-2">
             <CardTitle className="text-primary">FAQ — Perguntas frequentes</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6">
             <p className="text-sm text-muted-foreground mb-4">Explicações simples sobre margem, preço mínimo, desconto máximo e como preencher os campos. Exemplos incluídos.</p>
             <Accordion type="single" collapsible className="w-full space-y-2">
               <AccordionItem value="item-1" className="rounded-lg bg-background/70 border">
@@ -28,9 +28,13 @@ const FAQ = () => {
                   </ul>
                   <div className="space-y-2">
                     <p>Fórmula:</p>
-                    <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
+                    <div className="overflow-x-auto">
+                      <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
+                    </div>
                     <p>Exemplo rápido: Custo total = R$ 100 e margem desejada = 40%</p>
-                    <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{100}{1 - 0{,}40} = 166{,}67`}</BlockMath>
+                    <div className="overflow-x-auto">
+                      <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{100}{1 - 0{,}40} = 166{,}67`}</BlockMath>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -40,7 +44,9 @@ const FAQ = () => {
                   <p>
                     Porque a fórmula divide por <code>(1 − margem)</code>. Com 100%, esse termo vira 0 (não existe divisão por zero).
                   </p>
-                  <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - 1}`}</BlockMath>
+                  <div className="overflow-x-auto">
+                    <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - 1}`}</BlockMath>
+                  </div>
                   <p>
                     Se você pensou em “<strong>dobrar o custo</strong>”, isso não é 100% de margem — é <strong>100% de markup</strong>, que equivale a <strong>50% de margem</strong>.
                   </p>
@@ -51,11 +57,15 @@ const FAQ = () => {
                 <AccordionContent className="px-3 pb-3 text-sm text-muted-foreground space-y-3">
                   <div>
                     <p><strong>Margem (sobre o preço)</strong>:</p>
-                    <BlockMath>{String.raw`\text{Margem} = \dfrac{\text{Preço} - \text{Custo}}{\text{Preço}}`}</BlockMath>
+                    <div className="overflow-x-auto">
+                      <BlockMath>{String.raw`\text{Margem} = \dfrac{\text{Preço} - \text{Custo}}{\text{Preço}}`}</BlockMath>
+                    </div>
                   </div>
                   <div>
                     <p><strong>Markup (sobre o custo)</strong>:</p>
-                    <BlockMath>{String.raw`\text{Markup} = \dfrac{\text{Preço} - \text{Custo}}{\text{Custo}}`}</BlockMath>
+                    <div className="overflow-x-auto">
+                      <BlockMath>{String.raw`\text{Markup} = \dfrac{\text{Preço} - \text{Custo}}{\text{Custo}}`}</BlockMath>
+                    </div>
                   </div>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>100% de markup ⇒ 50% de margem (dobrar o custo).</li>
@@ -86,13 +96,21 @@ const FAQ = () => {
                     <li>R$/h: R$ 10</li>
                   </ul>
                   <p>1) Calcular o custo total:</p>
-                  <BlockMath>{String.raw`\text{Custo total} = 20 + (5 \times 10) + 30 = 100`}</BlockMath>
+                  <div className="overflow-x-auto">
+                    <BlockMath>{String.raw`\text{Custo total} = 20 + (5 \times 10) + 30 = 100`}</BlockMath>
+                  </div>
                   <p>2) Com margem desejada de 40%, preço mínimo:</p>
-                  <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{100}{1 - 0{,}40} = 166{,}67`}</BlockMath>
+                  <div className="overflow-x-auto">
+                    <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{100}{1 - 0{,}40} = 166{,}67`}</BlockMath>
+                  </div>
                   <p>3) Se você cobrar R$ 180, a sua margem atual será:</p>
-                  <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{180 - 100}{180} \times 100 = 44{,}44\%`}</BlockMath>
+                  <div className="overflow-x-auto">
+                    <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{180 - 100}{180} \times 100 = 44{,}44\%`}</BlockMath>
+                  </div>
                   <p>4) Desconto máximo mantendo 40% de margem (sobre R$ 180):</p>
-                  <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{180 - 166{,}67}{180} \times 100 = 7{,}41\%`}</BlockMath>
+                  <div className="overflow-x-auto">
+                    <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{180 - 166{,}67}{180} \times 100 = 7{,}41\%`}</BlockMath>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

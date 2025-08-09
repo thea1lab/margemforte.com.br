@@ -348,7 +348,7 @@ export const MarginCalculator = () => {
                   <HelpCircle className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs text-left">
+              <TooltipContent side="top" className="max-w-xs text-left">
                 {helpText}
               </TooltipContent>
             </Tooltip>
@@ -399,7 +399,7 @@ export const MarginCalculator = () => {
                   <HelpCircle className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs text-left">
+              <TooltipContent side="top" className="max-w-xs text-left">
                 {helpText}
               </TooltipContent>
             </Tooltip>
@@ -457,12 +457,12 @@ export const MarginCalculator = () => {
 
   return (
     <div className="space-y-6 mx-auto scroll-smooth">
-      <Card className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-        <CardHeader className="pb-12 text-center">
+      <Card className="border text-card-foreground bg-white rounded-xl shadow-lg p-3 sm:p-6 md:p-8">
+        <CardHeader className="p-0 sm:p-6 pb-12 text-center">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-[1.45] md:leading-[1.35] overflow-visible">
-            <span className="inline-flex items-baseline gap-3 overflow-visible">
+            <span className="inline-flex flex-wrap items-baseline justify-center gap-3 overflow-visible">
               <Calculator className="h-7 w-7 text-primary" />
-              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-block leading-[inherit] pb-[2px] overflow-visible whitespace-nowrap">
+              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-block leading-[inherit] pb-[2px] overflow-visible whitespace-normal break-words">
                 Calculadora de Margem
               </span>
             </span>
@@ -470,13 +470,13 @@ export const MarginCalculator = () => {
           <p className="text-sm md:text-base text-muted-foreground mt-2">
             Preencha os campos e veja seus números em tempo real.
           </p>
-          <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 px-3">
             <Badge variant="secondary" className="text-[11px]">Tempo real</Badge>
             <Badge variant="secondary" className="text-[11px]">Fácil de usar</Badge>
             <Badge variant="secondary" className="text-[11px]">Sem planilhas</Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="p-0 sm:p-6 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               {renderMoneyInput(
@@ -498,7 +498,7 @@ export const MarginCalculator = () => {
                   (v) => handleInputChange('travelCosts', v),
                   <Car className="h-4 w-4 text-muted-foreground" />,
                   '0,00',
-                  undefined,
+                  'h-12 text-lg',
                   'Custos com transporte, combustível, pedágio ou estadia relacionados ao serviço.'
                 )}
                 {renderMoneyInput(
@@ -508,7 +508,7 @@ export const MarginCalculator = () => {
                   (v) => handleInputChange('materials', v),
                   <Package className="h-4 w-4 text-muted-foreground" />,
                   '0,00',
-                  undefined,
+                  'h-12 text-lg',
                   'Gastos com peças, insumos e materiais necessários para executar o serviço.'
                 )}
               </div>
@@ -532,7 +532,7 @@ export const MarginCalculator = () => {
                   (v) => handleInputChange('hourlyRate', v),
                   <DollarSign className="h-4 w-4 text-muted-foreground" />,
                   '0,00',
-                  undefined,
+                  'h-12 text-lg',
                   'Quanto você cobra por hora de trabalho.'
                 )}
               </div>
@@ -550,7 +550,7 @@ export const MarginCalculator = () => {
                         <HelpCircle className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs text-left">
+                    <TooltipContent side="top" className="max-w-xs text-left">
                       Percentual de lucro-alvo. Usada para calcular o preço mínimo e o desconto máximo. Não altera a sua margem atual.
                     </TooltipContent>
                   </Tooltip>
@@ -608,8 +608,8 @@ export const MarginCalculator = () => {
       </Card>
 
       {result && (
-        <Card className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-          <CardHeader className="text-center pb-8">
+        <Card className="border text-card-foreground bg-white rounded-xl shadow-lg p-3 sm:p-6 animate-fade-in">
+          <CardHeader className="p-0 sm:p-6 text-center pb-8">
             <CardTitle className="flex items-center justify-center gap-3">
               <Badge variant={getStatusColor(result.status)} className="px-4 py-2 text-base md:text-lg">
                 <span className="inline-flex items-center gap-1">
@@ -619,7 +619,7 @@ export const MarginCalculator = () => {
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="p-0 sm:p-6 space-y-6">
             <div className="p-4 border rounded-lg bg-muted/20">
               {/* Row 1: labels */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border">
@@ -689,7 +689,9 @@ export const MarginCalculator = () => {
                     <div>
                       <p className="text-muted-foreground">1) Custo total</p>
                       <p className="mb-1">Objetivo: somar todos os custos do serviço (sem lucro).</p>
-                      <BlockMath>{String.raw`\text{Custo total} = \text{Deslocamento} + (\text{Horas} \times \text{R\$/h}) + \text{Materiais}`}</BlockMath>
+                      <div className="overflow-x-auto">
+                        <BlockMath>{String.raw`\text{Custo total} = \text{Deslocamento} + (\text{Horas} \times \text{R\$/h}) + \text{Materiais}`}</BlockMath>
+                      </div>
                       <p className="font-mono">
                         {formatBRL(parseCurrency(inputs.travelCosts))} + ({Number(inputs.hoursWorked) || 0} × {formatBRL(parseCurrency(inputs.hourlyRate))}) + {formatBRL(parseCurrency(inputs.materials))} = <span className="font-bold">{formatBRL(result.totalCost)}</span>
                       </p>
@@ -699,7 +701,9 @@ export const MarginCalculator = () => {
                     <div>
                       <p className="text-muted-foreground">2) Preço mínimo com margem desejada</p>
                       <p className="mb-1">Objetivo: descobrir o menor preço para atingir a margem desejada.</p>
-                      <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
+                      <div className="overflow-x-auto">
+                        <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
+                      </div>
                       <p className="font-mono">
                         {formatBRL(result.totalCost)} ÷ (1 − {Number(inputs.desiredMargin) || 0}%) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
                       </p>
@@ -709,7 +713,9 @@ export const MarginCalculator = () => {
                     <div>
                       <p className="text-muted-foreground">3) Sua margem com o valor informado</p>
                       <p className="mb-1">Objetivo: medir a sua margem real com o preço que você digitou.</p>
-                      <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{\text{Valor do serviço} - \text{Custo total}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                      <div className="overflow-x-auto">
+                        <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{\text{Valor do serviço} - \text{Custo total}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                      </div>
                       <p className="font-mono">
                         ({formatBRL(serviceValueNumber)} − {formatBRL(result.totalCost)}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{result.actualMargin.toFixed(1)}%</span>
                       </p>
@@ -719,7 +725,9 @@ export const MarginCalculator = () => {
                     <div>
                       <p className="text-muted-foreground">4) Desconto máximo</p>
                       <p className="mb-1">Objetivo: saber quanto desconto ainda cabe mantendo a margem desejada.</p>
-                      <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{\text{Valor do serviço} - \text{Preço mínimo}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                      <div className="overflow-x-auto">
+                        <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{\text{Valor do serviço} - \text{Preço mínimo}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                      </div>
                       <p className="font-mono">
                         ({formatBRL(serviceValueNumber)} − {isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{isFinite(result.maxDiscount) ? result.maxDiscount.toFixed(1) : 'indefinido'}%</span>
                       </p>
@@ -760,18 +768,18 @@ export const MarginCalculator = () => {
                   A simulação foi alterada e ainda não está salva.
                 </div>
               )}
-              <div className="flex justify-center gap-3">
-              <Button
-                variant="default"
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-white px-8 flex items-center gap-2"
-                onClick={handleSave}
-                disabled={isSaving || !simulationName.trim()}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? 'Salvando...' : 'Salvar no Histórico'}
-              </Button>
-              <Button variant="outline" size="lg" onClick={resetForm}>Nova simulação</Button>
+              <div className="flex flex-col sm:flex-row justify-center gap-3 w-full max-w-md">
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-8 flex items-center gap-2"
+                  onClick={handleSave}
+                  disabled={isSaving || !simulationName.trim()}
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Salvando...' : 'Salvar no Histórico'}
+                </Button>
+                <Button variant="outline" size="lg" className="w-full sm:w-auto justify-center" onClick={resetForm}>Nova simulação</Button>
               </div>
             </div>
           </CardContent>
@@ -779,7 +787,7 @@ export const MarginCalculator = () => {
       )}
 
       {!result && (
-        <Card className="bg-white rounded-xl shadow-md p-8 text-center">
+        <Card className="border text-card-foreground bg-white rounded-xl shadow-md p-3 sm:p-8 text-center">
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Calculator className="h-8 w-8" />
             <p className="text-sm">Preencha os campos acima para ver o resultado do cálculo.</p>
