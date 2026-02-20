@@ -26,6 +26,14 @@ export interface SavedCalculation {
   maxDiscount: number
   createdAt: string
   updatedAt: string
+  // New optional fields (backward-compatible)
+  taxRate?: number
+  taxRegime?: string
+  fixedCostMonthly?: number
+  jobsPerMonth?: number
+  fixedCostPerJob?: number
+  taxAmount?: number
+  netMargin?: number
 }
 
 function readAll(): SavedCalculation[] {
@@ -111,7 +119,7 @@ export function exportCalculationsJSON(): string {
 export function exportCalculationsCSV(): string {
   const all = readAll()
   if (all.length === 0) return ''
-  const header = 'Nome,Template,Valor do Serviço,Custo Total,Margem Desejada,Margem Real,Preço Mínimo,Desconto Máximo,Criado em'
+  const header = 'Nome,Template,Valor do Serviço,Custo Total,Margem Desejada,Margem Bruta,Margem Líquida,Impostos (%),Impostos (R$),Custo Fixo/Serviço,Preço Mínimo,Desconto Máximo,Criado em'
   const rows = all.map((c) =>
     [
       `"${c.name.replace(/"/g, '""')}"`,
@@ -120,6 +128,10 @@ export function exportCalculationsCSV(): string {
       c.totalCost.toFixed(2),
       c.desiredMargin.toFixed(2),
       c.actualMargin.toFixed(2),
+      (c.netMargin ?? c.actualMargin).toFixed(2),
+      (c.taxRate ?? 0).toFixed(2),
+      (c.taxAmount ?? 0).toFixed(2),
+      (c.fixedCostPerJob ?? 0).toFixed(2),
       isFinite(c.minimumPrice) ? c.minimumPrice.toFixed(2) : 'indefinido',
       isFinite(c.maxDiscount) ? c.maxDiscount.toFixed(2) : 'indefinido',
       c.createdAt,
@@ -145,9 +157,12 @@ export function exportCalculationText(id: string): string | null {
     }),
     ``,
     `Custo total: ${formatBRL(c.totalCost)}`,
+    ...(c.fixedCostPerJob ? [`Custo fixo por serviço: ${formatBRL(c.fixedCostPerJob)}`] : []),
     `Valor do serviço: ${formatBRL(c.serviceValue)}`,
     `Margem desejada: ${c.desiredMargin.toFixed(1)}%`,
-    `Margem real: ${c.actualMargin.toFixed(2)}%`,
+    `Margem bruta: ${c.actualMargin.toFixed(2)}%`,
+    ...(c.taxRate ? [`Impostos: ${c.taxRate.toFixed(1)}% (${formatBRL(c.taxAmount ?? 0)})`] : []),
+    `Margem líquida: ${(c.netMargin ?? c.actualMargin).toFixed(2)}%`,
     `Preço mínimo: ${isFinite(c.minimumPrice) ? formatBRL(c.minimumPrice) : 'indefinido'}`,
     `Desconto máximo: ${isFinite(c.maxDiscount) ? c.maxDiscount.toFixed(2) + '%' : 'indefinido'}`,
     ``,

@@ -11,6 +11,8 @@ export interface Template {
   description: string
   icon: string
   defaultCostItems: TemplateCostItem[]
+  suggestedTaxRegime?: string
+  suggestedFixedCosts?: string[]
 }
 
 export const templates: Template[] = [
@@ -24,6 +26,8 @@ export const templates: Template[] = [
       { label: 'Materiais', type: 'currency' },
       { label: 'Mão de obra', type: 'hours_rate' },
     ],
+    suggestedTaxRegime: 'mei',
+    suggestedFixedCosts: ['Aluguel/Espaço', 'Seguro', 'Contador'],
   },
   {
     id: 'confeitaria',
@@ -36,6 +40,8 @@ export const templates: Template[] = [
       { label: 'Gás/Energia', type: 'currency' },
       { label: 'Mão de obra', type: 'hours_rate' },
     ],
+    suggestedTaxRegime: 'mei',
+    suggestedFixedCosts: ['Aluguel da cozinha', 'Energia elétrica', 'Contador'],
   },
   {
     id: 'consultoria',
@@ -47,6 +53,8 @@ export const templates: Template[] = [
       { label: 'Materiais', type: 'currency' },
       { label: 'Horas de consultoria', type: 'hours_rate' },
     ],
+    suggestedTaxRegime: 'simples_6',
+    suggestedFixedCosts: ['Escritório/Coworking', 'Software', 'Contador'],
   },
   {
     id: 'artesanal',
@@ -58,6 +66,8 @@ export const templates: Template[] = [
       { label: 'Embalagem', type: 'currency' },
       { label: 'Mão de obra', type: 'hours_rate' },
     ],
+    suggestedTaxRegime: 'mei',
+    suggestedFixedCosts: ['Espaço/Ateliê', 'Energia', 'Contador'],
   },
   {
     id: 'freelancer',
@@ -69,6 +79,8 @@ export const templates: Template[] = [
       { label: 'Internet', type: 'currency' },
       { label: 'Horas de trabalho', type: 'hours_rate' },
     ],
+    suggestedTaxRegime: 'simples_6',
+    suggestedFixedCosts: ['Aluguel', 'Energia', 'Contador'],
   },
   {
     id: 'personalizado',

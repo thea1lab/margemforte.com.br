@@ -9,6 +9,9 @@ import {
   ArrowLeftRight,
   ClipboardList,
   BookOpen,
+  Receipt,
+  Building2,
+  TrendingUp,
 } from 'lucide-react'
 
 const faqItems = [
@@ -148,6 +151,89 @@ const faqItems = [
         <p>4) Desconto máximo mantendo 40% de margem (sobre R$ 180):</p>
         <div className="overflow-x-auto">
           <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{180 - 166{,}67}{180} \times 100 = 7{,}41\%`}</BlockMath>
+        </div>
+      </div>
+    ),
+  },
+  {
+    value: 'item-impostos',
+    icon: Receipt,
+    question: 'Como incluir impostos no cálculo?',
+    content: (
+      <div className="space-y-3">
+        <p>
+          A calculadora possui um campo de <strong>Impostos sobre o serviço</strong> com presets dos principais regimes tributários brasileiros:
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li><strong>MEI</strong>: ~5% (DAS fixo simplificado).</li>
+          <li><strong>Simples Nacional (Anexo III)</strong>: ~6% (serviços gerais).</li>
+          <li><strong>Simples Nacional (Anexo V)</strong>: ~15,5% (serviços intelectuais).</li>
+          <li><strong>Lucro Presumido</strong>: ~16,33% (ISS + PIS + COFINS + IRPJ + CSLL).</li>
+          <li><strong>Personalizado</strong>: informe a alíquota exata fornecida pelo seu contador.</li>
+        </ul>
+        <p>O imposto é aplicado sobre o <strong>valor do serviço</strong> (preço de venda), e a margem líquida é calculada assim:</p>
+        <div className="overflow-x-auto">
+          <BlockMath>{String.raw`\text{Margem líq.} = \dfrac{\text{Valor} - \text{Custo total} - \text{Impostos}}{\text{Valor}} \times 100`}</BlockMath>
+        </div>
+        <p>
+          Exemplo: Serviço de R$ 1.000, custo total R$ 500, MEI (5%):
+        </p>
+        <div className="overflow-x-auto">
+          <BlockMath>{String.raw`\text{Impostos} = 1000 \times 0{,}05 = 50`}</BlockMath>
+        </div>
+        <div className="overflow-x-auto">
+          <BlockMath>{String.raw`\text{Margem líq.} = \dfrac{1000 - 500 - 50}{1000} \times 100 = 45\%`}</BlockMath>
+        </div>
+      </div>
+    ),
+  },
+  {
+    value: 'item-custos-fixos',
+    icon: Building2,
+    question: 'Por que incluir custos fixos?',
+    content: (
+      <div className="space-y-3">
+        <p>
+          Custos fixos são despesas que você paga <strong>todo mês</strong>, independentemente de quantos serviços realiza. Se não incluí-los, sua margem parece maior do que realmente é.
+        </p>
+        <p>Exemplos comuns de custos fixos:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Aluguel do espaço/escritório</li>
+          <li>Energia elétrica e internet</li>
+          <li>Honorários do contador</li>
+          <li>Seguros e licenças</li>
+          <li>Assinaturas de software</li>
+        </ul>
+        <p>A calculadora faz o rateio proporcional automaticamente:</p>
+        <div className="overflow-x-auto">
+          <BlockMath>{String.raw`\text{Custo fixo por serviço} = \dfrac{\text{Total custos fixos mensais}}{\text{Quantidade de serviços por mês}}`}</BlockMath>
+        </div>
+        <p>
+          Exemplo: R$ 2.000/mês de custos fixos e 20 serviços/mês = <strong>R$ 100 de custo fixo por serviço</strong>.
+        </p>
+      </div>
+    ),
+  },
+  {
+    value: 'item-bruta-vs-liquida',
+    icon: TrendingUp,
+    question: 'Margem bruta vs margem líquida',
+    content: (
+      <div className="space-y-3">
+        <div>
+          <p><strong>Margem bruta</strong>: considera apenas o custo total (variável + fixo), sem impostos.</p>
+          <div className="overflow-x-auto">
+            <BlockMath>{String.raw`\text{Margem bruta} = \dfrac{\text{Valor} - \text{Custo total}}{\text{Valor}} \times 100`}</BlockMath>
+          </div>
+        </div>
+        <div>
+          <p><strong>Margem líquida</strong>: desconta também os impostos — é o que sobra <strong>de fato</strong> no seu bolso.</p>
+          <div className="overflow-x-auto">
+            <BlockMath>{String.raw`\text{Margem líquida} = \dfrac{\text{Valor} - \text{Custo total} - \text{Impostos}}{\text{Valor}} \times 100`}</BlockMath>
+          </div>
+        </div>
+        <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 text-sm">
+          <strong>Atenção:</strong> muitos negócios parecem lucrativos pela margem bruta, mas operam em prejuízo quando se consideram os impostos. Sempre analise a <strong>margem líquida</strong> para tomar decisões.
         </div>
       </div>
     ),

@@ -23,6 +23,9 @@ import {
   Palette,
   Monitor,
   Settings,
+  Info,
+  Receipt,
+  Building2,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -33,6 +36,8 @@ import { templates, getTemplate } from '@/lib/templates'
 import type { Template } from '@/lib/templates'
 import { saveCalculation, updateCalculation, getCalculation } from '@/lib/storage'
 import type { CostItemType } from '@/lib/storage'
+import { calculateMargin as calcMargin } from '@/lib/margin-math'
+import type { MarginResult } from '@/lib/margin-math'
 import {
   Select,
   SelectContent,
@@ -50,6 +55,15 @@ const iconMap: Record<string, React.ElementType> = {
   Settings,
 }
 
+const TAX_REGIMES = [
+  { id: 'none', label: 'Sem imposto', rate: 0 },
+  { id: 'mei', label: 'MEI', rate: 5.0 },
+  { id: 'simples_6', label: 'Simples (Anexo III)', rate: 6.0 },
+  { id: 'simples_11', label: 'Simples (Anexo V)', rate: 15.5 },
+  { id: 'lucro_presumido', label: 'Lucro Presumido', rate: 16.33 },
+  { id: 'custom', label: 'Personalizado', rate: null },
+]
+
 interface CostItem {
   id: string
   label: string
@@ -58,14 +72,7 @@ interface CostItem {
   rate: string
 }
 
-interface CalculationResult {
-  totalCost: number
-  minimumPrice: number
-  maxDiscount: number
-  actualMargin: number
-  status: 'safe' | 'warning' | 'danger'
-  message: string
-}
+type CalculationResult = MarginResult & { actualMargin: number }
 
 function costItemValue(item: CostItem, parseCurrency: (v: string) => number): number {
   if (item.type === 'currency') return parseCurrency(item.value)
@@ -81,6 +88,10 @@ export const MarginCalculator = () => {
   const [costItems, setCostItems] = useState<CostItem[]>([])
   const [serviceValue, setServiceValue] = useState('')
   const [desiredMargin, setDesiredMargin] = useState('20')
+  const [taxRate, setTaxRate] = useState('0')
+  const [taxRegime, setTaxRegime] = useState('none')
+  const [fixedCostMonthly, setFixedCostMonthly] = useState('')
+  const [jobsPerMonth, setJobsPerMonth] = useState('10')
   const [result, setResult] = useState<CalculationResult | null>(null)
   const [simulationName, setSimulationName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -113,6 +124,11 @@ export const MarginCalculator = () => {
             rate: ci.type !== 'currency' ? formatNumberToInput(ci.rate) : '',
           }))
         )
+        // Restore new fields with defaults
+        setTaxRate(String(data.taxRate ?? 0))
+        setTaxRegime(data.taxRegime ?? 'none')
+        setFixedCostMonthly(data.fixedCostMonthly ? formatNumberToInput(data.fixedCostMonthly) : '')
+        setJobsPerMonth(String(data.jobsPerMonth ?? 10))
         setHasSavedOnce(true)
         setHasUnsavedChanges(false)
       } else {
@@ -160,6 +176,41 @@ export const MarginCalculator = () => {
 
   const handleMarginChange = (value: string) => {
     setDesiredMargin(value)
+    markUnsaved()
+  }
+
+  const handleTaxRegimeChange = (regimeId: string) => {
+    setTaxRegime(regimeId)
+    const regime = TAX_REGIMES.find((r) => r.id === regimeId)
+    if (regime && regime.rate !== null) {
+      setTaxRate(String(regime.rate))
+    }
+    markUnsaved()
+  }
+
+  const handleTaxRateChange = (value: string) => {
+    const numVal = value.replace(/[^0-9.,]/g, '').replace(',', '.')
+    setTaxRate(numVal)
+    // If manually editing, check if it matches a preset
+    const num = Number(numVal)
+    const match = TAX_REGIMES.find((r) => r.rate === num)
+    if (match) {
+      setTaxRegime(match.id)
+    } else if (num === 0) {
+      setTaxRegime('none')
+    } else {
+      setTaxRegime('custom')
+    }
+    markUnsaved()
+  }
+
+  const handleFixedCostChange = (value: string) => {
+    setFixedCostMonthly(formatCurrency(value))
+    markUnsaved()
+  }
+
+  const handleJobsPerMonthChange = (value: string) => {
+    setJobsPerMonth(value)
     markUnsaved()
   }
 
@@ -218,6 +269,15 @@ export const MarginCalculator = () => {
     setSimulationId(null)
     setHasSavedOnce(false)
     setHasUnsavedChanges(false)
+    setFixedCostMonthly('')
+    setJobsPerMonth('10')
+    // Apply suggested tax regime from template
+    if (tpl.suggestedTaxRegime) {
+      handleTaxRegimeChange(tpl.suggestedTaxRegime)
+    } else {
+      setTaxRegime('none')
+      setTaxRate('0')
+    }
     navigate('/', { replace: true })
   }
 
@@ -232,33 +292,23 @@ export const MarginCalculator = () => {
     setHasUnsavedChanges(false)
     setHasSavedOnce(false)
     setSimulationId(null)
+    setTaxRate('0')
+    setTaxRegime('none')
+    setFixedCostMonthly('')
+    setJobsPerMonth('10')
     navigate('/', { replace: true })
   }
 
   const calculateMargin = (): CalculationResult => {
-    const svc = parseCurrency(serviceValue)
-    const totalCost = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
-    const margin = Math.min(100, Math.max(0, Number(desiredMargin) || 0))
-    const denominator = 1 - margin / 100
-    const minimumPrice = denominator <= 0 ? Number.POSITIVE_INFINITY : totalCost / denominator
-    const safeSvc = svc > 0 ? svc : 1
-    const maxDiscount = ((svc - minimumPrice) / safeSvc) * 100
-    const actualMargin = ((svc - totalCost) / safeSvc) * 100
-
-    let status: CalculationResult['status'] = 'safe'
-    let message = ''
-    if (actualMargin >= 20) {
-      status = 'safe'
-      message = 'Excelente margem de lucro!'
-    } else if (actualMargin >= 10) {
-      status = 'warning'
-      message = 'Atenção: margem apertada'
-    } else {
-      status = 'danger'
-      message = 'Alerta: risco de prejuízo'
-    }
-
-    return { totalCost, minimumPrice, maxDiscount, actualMargin, status, message }
+    const result = calcMargin({
+      serviceValue: parseCurrency(serviceValue),
+      variableCost: costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0),
+      fixedCostMonthly: parseCurrency(fixedCostMonthly),
+      jobsPerMonth: Number(jobsPerMonth) || 1,
+      desiredMargin: Number(desiredMargin) || 0,
+      taxRate: Number(taxRate) || 0,
+    })
+    return { ...result, actualMargin: result.grossMargin }
   }
 
   useEffect(() => {
@@ -267,7 +317,7 @@ export const MarginCalculator = () => {
     } else {
       setResult(null)
     }
-  }, [serviceValue, desiredMargin, costItems])
+  }, [serviceValue, desiredMargin, costItems, taxRate, fixedCostMonthly, jobsPerMonth])
 
   const handleSave = () => {
     if (!result) return
@@ -278,6 +328,7 @@ export const MarginCalculator = () => {
     }
     try {
       setIsSaving(true)
+      const currentTaxRate = Math.min(100, Math.max(0, Number(taxRate) || 0))
       const payload = {
         name: simulationName.trim(),
         templateId: selectedTemplate?.id ?? 'personalizado',
@@ -292,8 +343,15 @@ export const MarginCalculator = () => {
         desiredMargin: Math.min(100, Math.max(0, Number(desiredMargin) || 0)),
         totalCost: result.totalCost,
         minimumPrice: result.minimumPrice,
-        actualMargin: result.actualMargin,
+        actualMargin: result.grossMargin,
         maxDiscount: result.maxDiscount,
+        taxRate: currentTaxRate,
+        taxRegime,
+        fixedCostMonthly: parseCurrency(fixedCostMonthly),
+        jobsPerMonth: Number(jobsPerMonth) || 10,
+        fixedCostPerJob: result.fixedPerJob,
+        taxAmount: result.taxAmount,
+        netMargin: result.netMargin,
       }
 
       if (simulationId) {
@@ -418,6 +476,23 @@ export const MarginCalculator = () => {
     </button>
   )
 
+  const TaxPreset = ({ regime }: { regime: typeof TAX_REGIMES[number] }) => (
+    <button
+      type="button"
+      onClick={() => handleTaxRegimeChange(regime.id)}
+      className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
+        taxRegime === regime.id
+          ? 'bg-primary text-white border-primary'
+          : 'hover:bg-muted border-border'
+      }`}
+      tabIndex={-1}
+      aria-hidden="true"
+      aria-label={`Selecionar ${regime.label}`}
+    >
+      {regime.label}
+    </button>
+  )
+
   const typeLabel = (type: CostItemType) => {
     switch (type) {
       case 'currency': return 'Valor (R$)'
@@ -446,7 +521,7 @@ export const MarginCalculator = () => {
               Calcule sua margem<br className="hidden sm:block" /> de forma inteligente
             </h2>
             <p className="text-white/70 mt-4 text-base sm:text-lg max-w-2xl mx-auto">
-              Escolha o modelo que mais se encaixa no seu negócio
+              Descubra a margem real do seu negócio — com custos fixos, variáveis e impostos
             </p>
           </div>
         </div>
@@ -496,20 +571,30 @@ export const MarginCalculator = () => {
 
   // ─── Calculator screen ─────────────────────────────────────────
   const serviceValueNumber = parseCurrency(serviceValue)
-  const totalCostNumber = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
+  const fixedMonthlyNumber = parseCurrency(fixedCostMonthly)
+  const jobsNumber = Math.max(1, Number(jobsPerMonth) || 1)
+  const fixedPerJobNumber = fixedMonthlyNumber / jobsNumber
+  const variableCostNumber = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
+  const totalCostNumber = variableCostNumber + fixedPerJobNumber
+
   const minimumPriceDisplay = result && isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : ''
   const minPriceTextClass = minimumPriceDisplay ? getNumberSizeClasses(minimumPriceDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
-  const actualMarginDisplay = result ? `${result.actualMargin.toFixed(2)}%` : ''
-  const actualMarginTextClass = actualMarginDisplay ? getNumberSizeClasses(actualMarginDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
+  const netMarginDisplay = result ? `${result.netMargin.toFixed(2)}%` : ''
+  const netMarginTextClass = netMarginDisplay ? getNumberSizeClasses(netMarginDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
   const maxDiscountDisplay = result && isFinite(result.maxDiscount) ? `${Math.max(0, result.maxDiscount).toFixed(2)}%` : ''
   const maxDiscountTextClass = maxDiscountDisplay ? getNumberSizeClasses(maxDiscountDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
 
-  const revenueDisplay = result ? formatBRL((Math.max(result.actualMargin, 0) / 100) * serviceValueNumber) : ''
-  const revenueTextClass = revenueDisplay ? getSmallNumberSizeClasses(revenueDisplay) : 'text-base md:text-lg'
+  const netProfitValue = result ? (serviceValueNumber - result.totalCost - result.taxAmount) : 0
+  const netProfitDisplay = result ? formatBRL(Math.max(0, netProfitValue)) : ''
+  const netProfitTextClass = netProfitDisplay ? getSmallNumberSizeClasses(netProfitDisplay) : 'text-base md:text-lg'
+  const taxAmountDisplay = result ? formatBRL(result.taxAmount) : ''
+  const taxAmountTextClass = taxAmountDisplay ? getSmallNumberSizeClasses(taxAmountDisplay) : 'text-base md:text-lg'
   const totalCostDisplay = result ? formatBRL(result.totalCost) : ''
   const totalCostTextClass = totalCostDisplay ? getSmallNumberSizeClasses(totalCostDisplay) : 'text-base md:text-lg'
   const serviceValueDisplay = result ? formatBRL(serviceValueNumber) : ''
   const serviceValueTextClass = serviceValueDisplay ? getSmallNumberSizeClasses(serviceValueDisplay) : 'text-base md:text-lg'
+
+  const currentTaxRateNum = Math.min(100, Math.max(0, Number(taxRate) || 0))
 
   return (
     <div className="space-y-8 mx-auto scroll-smooth">
@@ -521,21 +606,19 @@ export const MarginCalculator = () => {
         <CardHeader className="px-5 sm:px-8 pt-8 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
+              <button
+                type="button"
+                onClick={goBackToTemplates}
+                className="text-xs text-primary hover:underline flex items-center gap-1 mb-1"
+              >
+                <ArrowLeft className="h-3 w-3" /> Trocar modelo
+              </button>
               <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
                 Calculadora de Margem
               </CardTitle>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="secondary" className="text-xs">
-                  {selectedTemplate.name}
-                </Badge>
-                <button
-                  type="button"
-                  onClick={goBackToTemplates}
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  <ArrowLeft className="h-3 w-3" /> Trocar modelo
-                </button>
-              </div>
+              <Badge variant="secondary" className="text-xs mt-2">
+                {selectedTemplate.name}
+              </Badge>
             </div>
           </div>
         </CardHeader>
@@ -616,9 +699,125 @@ export const MarginCalculator = () => {
             </div>
           </div>
 
+          {/* Impostos */}
+          <div className="p-5 sm:p-6 bg-secondary/50 rounded-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    Impostos sobre o serviço
+                  </Label>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-left">
+                        Percentual de impostos sobre o valor do serviço. Consulte seu contador para a alíquota exata.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {TAX_REGIMES.filter((r) => r.id !== 'custom').map((regime) => (
+                    <TaxPreset key={regime.id} regime={regime} />
+                  ))}
+                </div>
+                {taxRegime === 'custom' && (
+                  <div className="relative max-w-[200px]">
+                    <Input
+                      placeholder="0,00"
+                      value={taxRate}
+                      onChange={(e) => handleTaxRateChange(e.target.value)}
+                      className="pr-8"
+                      inputMode="decimal"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Selecione seu regime tributário ou informe a alíquota manualmente.</p>
+              </div>
+              <div className="text-center sm:text-right">
+                <span className="text-2xl font-bold text-primary">{currentTaxRateNum}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Custos fixos */}
+          <div className="p-5 sm:p-6 bg-secondary/50 rounded-xl space-y-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                Custos fixos mensais
+              </Label>
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-left">
+                    Custos que você paga todo mês independente de quantos serviços faz. Ex: aluguel, energia, internet, contador.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground">Total de custos fixos mensais</span>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    placeholder="0,00"
+                    value={fixedCostMonthly}
+                    onChange={(e) => handleFixedCostChange(e.target.value)}
+                    className="pl-10"
+                    inputMode="numeric"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground">Serviços por mês</span>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="10"
+                  value={jobsPerMonth}
+                  onChange={(e) => handleJobsPerMonthChange(e.target.value)}
+                />
+              </div>
+            </div>
+            {fixedMonthlyNumber > 0 && (
+              <div className="text-sm font-medium text-primary">
+                Custo fixo por serviço: {formatBRL(fixedPerJobNumber)}
+              </div>
+            )}
+            {selectedTemplate.suggestedFixedCosts && selectedTemplate.suggestedFixedCosts.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Inclua: {selectedTemplate.suggestedFixedCosts.join(', ')}, etc.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Inclua aluguel, energia, internet, contador, seguros, etc.
+            </p>
+          </div>
+
+          {/* Educational banner */}
+          <div className="flex gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-800">
+            <Info className="h-5 w-5 shrink-0 mt-0.5" />
+            <p className="text-sm">
+              Inclua <strong>TODOS</strong> os custos para ver a margem real: custos diretos nos itens abaixo, custos fixos mensais na seção acima, e impostos. Margem ≠ Markup.
+            </p>
+          </div>
+
           {/* Cost items */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Itens de custo</Label>
+            <Label className="text-sm font-medium">Itens de custo (variáveis)</Label>
             {costItems.map((item) => (
               <div key={item.id} className="p-4 sm:p-5 bg-secondary/30 rounded-xl border border-border/50">
                 <div className="flex items-start gap-3">
@@ -769,6 +968,12 @@ export const MarginCalculator = () => {
                   </div>
                 )
               })}
+              {fixedPerJobNumber > 0 && (
+                <div className="space-y-0.5">
+                  <span className="text-xs text-muted-foreground">Custo fixo/serviço</span>
+                  <span className="text-sm font-medium block">{renderBreakable(formatBRL(fixedPerJobNumber))}</span>
+                </div>
+              )}
               <div className="space-y-0.5 col-span-2 md:col-span-1">
                 <span className="text-xs text-muted-foreground">Custo total</span>
                 <span className="text-sm font-bold block">{renderBreakable(formatBRL(totalCostNumber))}</span>
@@ -803,17 +1008,17 @@ export const MarginCalculator = () => {
                   {isFinite(result.minimumPrice) ? renderBreakable(minimumPriceDisplay) : 'indefinido'}
                 </div>
                 <span className="text-xs text-muted-foreground mt-1 block">
-                  com margem de {desiredMargin}%
+                  com margem de {desiredMargin}%{currentTaxRateNum > 0 ? ` + ${currentTaxRateNum}% impostos` : ''}
                 </span>
               </div>
 
-              {/* Margem atual */}
+              {/* Margem líquida */}
               <div className={`p-6 rounded-xl text-center ${getMarginBg(result.status)}`}>
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Margem atual
+                  Margem líquida
                 </span>
-                <div className={`${actualMarginTextClass} font-extrabold mt-2 break-words ${getMarginColor(result.status)}`}>
-                  {renderBreakable(actualMarginDisplay)}
+                <div className={`${netMarginTextClass} font-extrabold mt-2 break-words ${getMarginColor(result.status)}`}>
+                  {renderBreakable(netMarginDisplay)}
                 </div>
                 <span className="text-xs text-muted-foreground mt-1 block">
                   sobre {formatBRL(serviceValueNumber)}
@@ -834,19 +1039,31 @@ export const MarginCalculator = () => {
               </div>
             </div>
 
-            {/* Secondary metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Secondary metrics — 4 cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 rounded-xl bg-secondary/20">
-                <span className="text-sm text-muted-foreground block">Receita (margem)</span>
-                <span className={`${revenueTextClass} font-bold ${getMarginColor(result.status)} break-words`}>
-                  {renderBreakable(revenueDisplay)}
+                <span className="text-sm text-muted-foreground block">Lucro líquido</span>
+                <span className={`${netProfitTextClass} font-bold ${getMarginColor(result.status)} break-words`}>
+                  {renderBreakable(netProfitDisplay)}
                 </span>
+              </div>
+              <div className="text-center p-4 rounded-xl bg-secondary/20">
+                <span className="text-sm text-muted-foreground block">Impostos</span>
+                <span className={`${taxAmountTextClass} font-bold break-words`}>
+                  {renderBreakable(taxAmountDisplay)}
+                </span>
+                {currentTaxRateNum > 0 && (
+                  <span className="text-xs text-muted-foreground block">({currentTaxRateNum}%)</span>
+                )}
               </div>
               <div className="text-center p-4 rounded-xl bg-secondary/20">
                 <span className="text-sm text-muted-foreground block">Custo total</span>
                 <span className={`${totalCostTextClass} font-bold break-words`}>
                   {renderBreakable(totalCostDisplay)}
                 </span>
+                {result.fixedPerJob > 0 && (
+                  <span className="text-xs text-muted-foreground block">var. {formatBRL(result.variableCost)} + fixo {formatBRL(result.fixedPerJob)}</span>
+                )}
               </div>
               <div className="text-center p-4 rounded-xl bg-secondary/20">
                 <span className="text-sm text-muted-foreground block">Valor do serviço</span>
@@ -863,10 +1080,10 @@ export const MarginCalculator = () => {
                 <AccordionContent>
                   <div className="space-y-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground">1) Custo total</p>
+                      <p className="text-muted-foreground">1) Custo total (variável + fixo)</p>
                       <p className="mb-1">Objetivo: somar todos os custos (sem lucro).</p>
                       <div className="overflow-x-auto">
-                        <BlockMath>{String.raw`\text{Custo total} = \sum \text{Itens de custo}`}</BlockMath>
+                        <BlockMath>{String.raw`\text{Custo total} = \text{Custos variáveis} + \text{Custo fixo por serviço}`}</BlockMath>
                       </div>
                       <div className="font-mono text-xs space-y-0.5">
                         {costItems.map((item) => (
@@ -874,6 +1091,9 @@ export const MarginCalculator = () => {
                             {item.label}: {formatBRL(costItemValue(item, parseCurrency))}
                           </div>
                         ))}
+                        {result.fixedPerJob > 0 && (
+                          <div>Custo fixo/serviço: {formatBRL(result.fixedPerJob)} ({formatBRL(fixedMonthlyNumber)} / {jobsNumber} serviços)</div>
+                        )}
                       </div>
                       <p className="font-mono mt-1">
                         Total = <span className="font-bold">{formatBRL(result.totalCost)}</span>
@@ -881,29 +1101,54 @@ export const MarginCalculator = () => {
                     </div>
                     <Separator />
                     <div>
-                      <p className="text-muted-foreground">2) Preço mínimo com margem desejada</p>
+                      <p className="text-muted-foreground">2) Preço mínimo com margem desejada{currentTaxRateNum > 0 ? ' e impostos' : ''}</p>
                       <p className="mb-1">Objetivo: descobrir o menor preço para atingir a margem desejada.</p>
                       <div className="overflow-x-auto">
-                        <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
+                        <BlockMath>{currentTaxRateNum > 0
+                          ? String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem} - \text{Impostos}}`
+                          : String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`
+                        }</BlockMath>
                       </div>
                       <p className="font-mono">
-                        {formatBRL(result.totalCost)} / (1 - {Number(desiredMargin) || 0}%) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
+                        {formatBRL(result.totalCost)} / (1 - {Number(desiredMargin) || 0}%{currentTaxRateNum > 0 ? ` - ${currentTaxRateNum}%` : ''}) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
                       </p>
                     </div>
                     <Separator />
                     <div>
-                      <p className="text-muted-foreground">3) Sua margem com o valor informado</p>
-                      <p className="mb-1">Objetivo: medir a sua margem real com o preço que você digitou.</p>
+                      <p className="text-muted-foreground">3) Margem bruta</p>
+                      <p className="mb-1">Lucro antes dos impostos, em relação ao preço.</p>
                       <div className="overflow-x-auto">
-                        <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{\text{Valor do serviço} - \text{Custo total}}{\text{Valor do serviço}} \times 100`}</BlockMath>
+                        <BlockMath>{String.raw`\%\,\text{Margem bruta} = \dfrac{\text{Valor} - \text{Custo total}}{\text{Valor}} \times 100`}</BlockMath>
                       </div>
                       <p className="font-mono">
-                        ({formatBRL(serviceValueNumber)} - {formatBRL(result.totalCost)}) / {formatBRL(serviceValueNumber)} x 100 = <span className="font-bold">{result.actualMargin.toFixed(1)}%</span>
+                        ({formatBRL(serviceValueNumber)} - {formatBRL(result.totalCost)}) / {formatBRL(serviceValueNumber)} x 100 = <span className="font-bold">{result.grossMargin.toFixed(1)}%</span>
                       </p>
                     </div>
                     <Separator />
                     <div>
-                      <p className="text-muted-foreground">4) Desconto máximo</p>
+                      <p className="text-muted-foreground">4) Impostos</p>
+                      <p className="mb-1">Valor dos impostos sobre o preço do serviço.</p>
+                      <div className="overflow-x-auto">
+                        <BlockMath>{String.raw`\text{Impostos} = \text{Valor} \times \text{Alíquota}`}</BlockMath>
+                      </div>
+                      <p className="font-mono">
+                        {formatBRL(serviceValueNumber)} x {currentTaxRateNum}% = <span className="font-bold">{formatBRL(result.taxAmount)}</span>
+                      </p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-muted-foreground">5) Margem líquida</p>
+                      <p className="mb-1">O que sobra de fato após custos e impostos.</p>
+                      <div className="overflow-x-auto">
+                        <BlockMath>{String.raw`\%\,\text{Margem líq.} = \dfrac{\text{Valor} - \text{Custo total} - \text{Impostos}}{\text{Valor}} \times 100`}</BlockMath>
+                      </div>
+                      <p className="font-mono">
+                        ({formatBRL(serviceValueNumber)} - {formatBRL(result.totalCost)} - {formatBRL(result.taxAmount)}) / {formatBRL(serviceValueNumber)} x 100 = <span className="font-bold">{result.netMargin.toFixed(1)}%</span>
+                      </p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-muted-foreground">6) Desconto máximo</p>
                       <p className="mb-1">Objetivo: saber quanto desconto ainda cabe mantendo a margem desejada.</p>
                       <div className="overflow-x-auto">
                         <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{\text{Valor do serviço} - \text{Preço mínimo}}{\text{Valor do serviço}} \times 100`}</BlockMath>

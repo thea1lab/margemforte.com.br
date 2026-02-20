@@ -157,7 +157,7 @@ const Historico = () => {
                       <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Criado em</TableHead>
                       <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Valor do serviço</TableHead>
                       <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Custo total</TableHead>
-                      <TableHead className="md:w-[6%] md:px-4 uppercase tracking-wider text-xs font-semibold">Margem</TableHead>
+                      <TableHead className="md:w-[6%] md:px-4 uppercase tracking-wider text-xs font-semibold">Margem liq.</TableHead>
                       <TableHead className="md:w-[10%] md:px-4 text-right uppercase tracking-wider text-xs font-semibold">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -175,8 +175,8 @@ const Historico = () => {
                           <TableCell className="md:p-4 align-top break-all whitespace-normal text-right text-sm">{formatBRL(r.serviceValue)}</TableCell>
                           <TableCell className="md:p-4 align-top break-all whitespace-normal text-right text-sm">{formatBRL(r.totalCost)}</TableCell>
                           <TableCell className="md:p-4 align-top text-right">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${getMarginBadgeClasses(r.actualMargin)}`}>
-                              {r.actualMargin.toFixed(0)}%
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${getMarginBadgeClasses(r.netMargin ?? r.actualMargin)}`}>
+                              {(r.netMargin ?? r.actualMargin).toFixed(0)}%
                             </span>
                           </TableCell>
                           <TableCell className="md:p-4 align-top text-right">
@@ -235,9 +235,11 @@ const Historico = () => {
               </div>
             )}
             <div className="mt-4 space-y-3">
-              <div className="text-xs text-muted-foreground">
-                Dica: clique em uma linha para abrir a simulação.
-              </div>
+              {rows.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Dica: clique em uma linha para abrir a simulação.
+                </div>
+              )}
               <div className="w-full">
                 <Pagination>
                   <PaginationContent className="flex flex-nowrap items-center justify-center gap-2">
