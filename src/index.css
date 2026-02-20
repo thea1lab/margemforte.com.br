@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Margem Forte Design System — Indigo + Amber Premium Theme
+/* Margem Forte Design System - Indigo + Amber Premium Theme
    All colors MUST be HSL for consistency and theming support.
 */
 
@@ -33,7 +33,7 @@
     --destructive-light: 0 84% 75%;
     --destructive-foreground: 0 0% 98%;
 
-    /* Neutral Palette — tom quente */
+    /* Neutral Palette - tom quente */
     --background: 40 20% 98%;
     --foreground: 235 20% 12%;
 

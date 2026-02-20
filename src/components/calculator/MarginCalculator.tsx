@@ -521,7 +521,7 @@ export const MarginCalculator = () => {
               Calcule sua margem<br className="hidden sm:block" /> de forma inteligente
             </h2>
             <p className="text-white/70 mt-4 text-base sm:text-lg max-w-2xl mx-auto">
-              Descubra a margem real do seu negócio — com custos fixos, variáveis e impostos
+              Descubra a margem real do seu negócio - com custos fixos, variáveis e impostos
             </p>
           </div>
         </div>
@@ -1053,7 +1053,7 @@ export const MarginCalculator = () => {
               </div>
             </div>
 
-            {/* Secondary metrics — 4 cards */}
+            {/* Secondary metrics - 4 cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 rounded-xl bg-secondary/20">
                 <span className="text-sm text-muted-foreground block">Lucro líquido</span>

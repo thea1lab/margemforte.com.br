@@ -31,7 +31,7 @@ const faqItems = [
           <li><strong>Consultoria</strong>: Deslocamento, Materiais, Horas de consultoria.</li>
           <li><strong>Produto Artesanal</strong>: Materiais, Embalagem, Mão de obra.</li>
           <li><strong>Freelancer / TI</strong>: Ferramentas/Software, Internet, Horas de trabalho.</li>
-          <li><strong>Personalizado</strong>: vazio — monte seus próprios itens de custo.</li>
+          <li><strong>Personalizado</strong>: vazio - monte seus próprios itens de custo.</li>
         </ul>
         <p>Você sempre pode adicionar, remover ou renomear itens de custo, independentemente do modelo escolhido.</p>
       </div>
@@ -77,7 +77,7 @@ const faqItems = [
           <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - 1}`}</BlockMath>
         </div>
         <p>
-          Se você pensou em "<strong>dobrar o custo</strong>", isso não é 100% de margem — é <strong>100% de markup</strong>, que equivale a <strong>50% de margem</strong>.
+          Se você pensou em "<strong>dobrar o custo</strong>", isso não é 100% de margem - é <strong>100% de markup</strong>, que equivale a <strong>50% de margem</strong>.
         </p>
       </div>
     ),
@@ -227,7 +227,7 @@ const faqItems = [
           </div>
         </div>
         <div>
-          <p><strong>Margem líquida</strong>: desconta também os impostos — é o que sobra <strong>de fato</strong> no seu bolso.</p>
+          <p><strong>Margem líquida</strong>: desconta também os impostos - é o que sobra <strong>de fato</strong> no seu bolso.</p>
           <div className="overflow-x-auto">
             <BlockMath>{String.raw`\text{Margem líquida} = \dfrac{\text{Valor} - \text{Custo total} - \text{Impostos}}{\text{Valor}} \times 100`}</BlockMath>
           </div>
