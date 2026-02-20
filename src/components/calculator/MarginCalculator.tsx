@@ -609,7 +609,7 @@ export const MarginCalculator = () => {
               <button
                 type="button"
                 onClick={goBackToTemplates}
-                className="text-xs text-primary hover:underline flex items-center gap-1 mb-1"
+                className="text-xs text-primary hover:underline flex items-center gap-1 mb-2"
               >
                 <ArrowLeft className="h-3 w-3" /> Trocar modelo
               </button>
@@ -629,7 +629,7 @@ export const MarginCalculator = () => {
             <div className="flex items-center gap-2">
               <Label htmlFor="serviceValue" className="text-sm font-medium flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
-                Valor do Serviço
+                Preço cobrado do cliente
               </Label>
               <TooltipProvider delayDuration={100}>
                 <Tooltip>
@@ -639,7 +639,7 @@ export const MarginCalculator = () => {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs text-left">
-                    Preço que você pretende cobrar do cliente.
+                    Quanto você vai cobrar pelo serviço ou produto.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -781,7 +781,21 @@ export const MarginCalculator = () => {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground">Serviços por mês</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Quantos serviços/vendas por mês?</span>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-left">
+                        Quantos serviços ou vendas você faz por mês, em média. Usado para dividir os custos fixos por cada serviço.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   type="number"
                   min="1"
@@ -797,13 +811,10 @@ export const MarginCalculator = () => {
                 Custo fixo por serviço: {formatBRL(fixedPerJobNumber)}
               </div>
             )}
-            {selectedTemplate.suggestedFixedCosts && selectedTemplate.suggestedFixedCosts.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Inclua: {selectedTemplate.suggestedFixedCosts.join(', ')}, etc.
-              </p>
-            )}
             <p className="text-xs text-muted-foreground">
-              Inclua aluguel, energia, internet, contador, seguros, etc.
+              {selectedTemplate.suggestedFixedCosts && selectedTemplate.suggestedFixedCosts.length > 0
+                ? `Inclua: ${selectedTemplate.suggestedFixedCosts.join(', ')}, etc.`
+                : 'Inclua aluguel, energia, internet, contador, seguros, etc.'}
             </p>
           </div>
 
@@ -811,13 +822,16 @@ export const MarginCalculator = () => {
           <div className="flex gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-800">
             <Info className="h-5 w-5 shrink-0 mt-0.5" />
             <p className="text-sm">
-              Inclua <strong>TODOS</strong> os custos para ver a margem real: custos diretos nos itens abaixo, custos fixos mensais na seção acima, e impostos. Margem ≠ Markup.
+              Para calcular sua margem real, preencha <strong>todos</strong> os campos: o preço cobrado, os custos de cada serviço, seus gastos fixos do mês e os impostos.
             </p>
           </div>
 
           {/* Cost items */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Itens de custo (variáveis)</Label>
+            <div>
+              <Label className="text-sm font-medium">Custos por serviço (variáveis)</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Quanto você gasta para fazer <strong>cada</strong> serviço ou produto.</p>
+            </div>
             {costItems.map((item) => (
               <div key={item.id} className="p-4 sm:p-5 bg-secondary/30 rounded-xl border border-border/50">
                 <div className="flex items-start gap-3">
