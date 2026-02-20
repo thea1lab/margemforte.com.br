@@ -16,6 +16,7 @@ import {
   Plus,
   Trash2,
   ArrowLeft,
+  ArrowRight,
   Wrench,
   CakeSlice,
   Briefcase,
@@ -53,8 +54,8 @@ interface CostItem {
   id: string
   label: string
   type: CostItemType
-  value: string  // raw input string
-  rate: string   // raw input string (for hours_rate / quantity_price)
+  value: string
+  rate: string
 }
 
 interface CalculationResult {
@@ -69,7 +70,6 @@ interface CalculationResult {
 function costItemValue(item: CostItem, parseCurrency: (v: string) => number): number {
   if (item.type === 'currency') return parseCurrency(item.value)
   if (item.type === 'hours_rate') return (Number(item.value) || 0) * parseCurrency(item.rate)
-  // quantity_price
   return (Number(item.value) || 0) * parseCurrency(item.rate)
 }
 
@@ -92,7 +92,6 @@ export const MarginCalculator = () => {
   const [newItemLabel, setNewItemLabel] = useState('')
   const [newItemType, setNewItemType] = useState<CostItemType>('currency')
 
-  // Load simulation by ID from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const id = params.get('id')
@@ -104,7 +103,7 @@ export const MarginCalculator = () => {
         setServiceValue(formatNumberToInput(data.serviceValue))
         setDesiredMargin(String(data.desiredMargin))
         const tpl = getTemplate(data.templateId)
-        setSelectedTemplate(tpl ?? templates[templates.length - 1]) // fallback to personalizado
+        setSelectedTemplate(tpl ?? templates[templates.length - 1])
         setCostItems(
           data.costItems.map((ci) => ({
             id: ci.id,
@@ -202,7 +201,6 @@ export const MarginCalculator = () => {
     markUnsaved()
   }
 
-  // Select template and populate default cost items
   const selectTemplate = (tpl: Template) => {
     setSelectedTemplate(tpl)
     setCostItems(
@@ -237,7 +235,6 @@ export const MarginCalculator = () => {
     navigate('/', { replace: true })
   }
 
-  // Calculate results
   const calculateMargin = (): CalculationResult => {
     const svc = parseCurrency(serviceValue)
     const totalCost = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
@@ -329,16 +326,6 @@ export const MarginCalculator = () => {
     }
   }
 
-  // --- Helpers for display ---
-  const getStatusColor = (status: CalculationResult['status']) => {
-    switch (status) {
-      case 'safe': return 'success'
-      case 'warning': return 'warning'
-      case 'danger': return 'destructive'
-      default: return 'secondary'
-    }
-  }
-
   const getStatusIcon = (status: CalculationResult['status']) => {
     switch (status) {
       case 'safe': return <CheckCircle2 className="h-5 w-5" />
@@ -348,12 +335,39 @@ export const MarginCalculator = () => {
     }
   }
 
+  const getStatusBg = (status: CalculationResult['status']) => {
+    switch (status) {
+      case 'safe': return 'bg-success/10 border-success/20 text-success'
+      case 'warning': return 'bg-warning/10 border-warning/20 text-warning-foreground'
+      case 'danger': return 'bg-destructive/10 border-destructive/20 text-destructive'
+      default: return 'bg-secondary'
+    }
+  }
+
+  const getMarginColor = (status: CalculationResult['status']) => {
+    switch (status) {
+      case 'safe': return 'text-success'
+      case 'warning': return 'text-warning-foreground'
+      case 'danger': return 'text-destructive'
+      default: return 'text-foreground'
+    }
+  }
+
+  const getMarginBg = (status: CalculationResult['status']) => {
+    switch (status) {
+      case 'safe': return 'bg-success/10'
+      case 'warning': return 'bg-warning/10'
+      case 'danger': return 'bg-destructive/10'
+      default: return 'bg-secondary/40'
+    }
+  }
+
   const getNumberSizeClasses = (text: string): string => {
     const length = text.replace(/[\s\u00A0]/g, '').length
-    if (length <= 12) return 'text-3xl md:text-3xl'
-    if (length <= 18) return 'text-2xl md:text-2xl'
-    if (length <= 24) return 'text-xl md:text-xl'
-    return 'text-lg md:text-lg'
+    if (length <= 12) return 'text-3xl sm:text-4xl md:text-5xl'
+    if (length <= 18) return 'text-2xl sm:text-3xl md:text-4xl'
+    if (length <= 24) return 'text-xl sm:text-2xl md:text-3xl'
+    return 'text-lg sm:text-xl md:text-2xl'
   }
 
   const getSmallNumberSizeClasses = (text: string): string => {
@@ -391,7 +405,7 @@ export const MarginCalculator = () => {
     <button
       type="button"
       onClick={() => handleMarginChange(String(value))}
-      className={`px-3 py-1 rounded-full border text-xs transition ${
+      className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
         Number(desiredMargin) === value
           ? 'bg-primary text-white border-primary'
           : 'hover:bg-muted border-border'
@@ -412,70 +426,83 @@ export const MarginCalculator = () => {
     }
   }
 
-  // Template selection screen
+  // ─── Template selection screen ─────────────────────────────────
   if (!selectedTemplate) {
     return (
-      <div className="space-y-6">
-        <Card className="border text-card-foreground bg-white rounded-xl shadow-lg p-3 sm:p-6 md:p-8">
-          <CardHeader className="p-0 sm:p-6 pb-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-[1.45] md:leading-[1.35]">
-              <span className="inline-flex flex-wrap items-baseline justify-center gap-3">
-                <Calculator className="h-7 w-7 text-primary" />
-                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-block leading-[inherit] pb-[2px]">
-                  Calculadora de Margem
-                </span>
-              </span>
-            </h2>
-            <p className="text-sm md:text-base text-muted-foreground mt-2">
-              Escolha o modelo que mais se encaixa no seu negócio.
-            </p>
-          </CardHeader>
-          <CardContent className="p-0 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {templates.map((tpl) => {
-                const Icon = iconMap[tpl.icon] ?? Settings
-                return (
-                  <button
-                    key={tpl.id}
-                    type="button"
-                    onClick={() => selectTemplate(tpl)}
-                    className="flex flex-col items-center gap-3 p-6 border rounded-xl bg-white hover:border-primary hover:shadow-md transition-all text-center group cursor-pointer"
-                  >
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-foreground">{tpl.name}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{tpl.description}</div>
-                    </div>
-                    {tpl.defaultCostItems.length > 0 && (
-                      <div className="flex flex-wrap gap-1 justify-center">
-                        {tpl.defaultCostItems.map((ci) => (
-                          <Badge key={ci.label} variant="secondary" className="text-[10px]">
-                            {ci.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
+      <div className="space-y-8">
+        {/* Hero section */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[hsl(235,55%,20%)] via-[hsl(245,50%,30%)] to-[hsl(255,45%,35%)] px-6 py-12 sm:px-10 sm:py-16 md:py-20 text-center">
+          {/* Decorative circles */}
+          <div className="absolute top-[-60px] right-[-40px] w-[200px] h-[200px] rounded-full bg-white/5" />
+          <div className="absolute bottom-[-80px] left-[-60px] w-[250px] h-[250px] rounded-full bg-white/5" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-white/[0.02]" />
+
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur text-white/90 text-sm font-medium mb-6">
+              <Calculator className="h-4 w-4" />
+              Calculadora de Margem
             </div>
-          </CardContent>
-        </Card>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+              Calcule sua margem<br className="hidden sm:block" /> de forma inteligente
+            </h2>
+            <p className="text-white/70 mt-4 text-base sm:text-lg max-w-2xl mx-auto">
+              Escolha o modelo que mais se encaixa no seu negócio
+            </p>
+          </div>
+        </div>
+
+        {/* Template cards */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Selecione seu modelo
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates.map((tpl) => {
+              const Icon = iconMap[tpl.icon] ?? Settings
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => selectTemplate(tpl)}
+                  className="relative flex flex-col items-start text-left gap-3 p-6 sm:p-7 border rounded-2xl bg-white hover:border-primary/40 hover:shadow-medium transition-all group cursor-pointer"
+                >
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-primary">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center group-hover:from-primary/15 group-hover:to-primary/10 transition-colors">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground">{tpl.name}</div>
+                    <div className="text-sm text-muted-foreground mt-1">{tpl.description}</div>
+                  </div>
+                  {tpl.defaultCostItems.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {tpl.defaultCostItems.map((ci) => (
+                        <Badge key={ci.label} variant="secondary" className="text-[10px] rounded-md">
+                          {ci.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
     )
   }
 
-  // Calculator screen
+  // ─── Calculator screen ─────────────────────────────────────────
   const serviceValueNumber = parseCurrency(serviceValue)
   const totalCostNumber = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
   const minimumPriceDisplay = result && isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : ''
-  const minPriceTextClass = minimumPriceDisplay ? getNumberSizeClasses(minimumPriceDisplay) : 'text-3xl md:text-4xl'
+  const minPriceTextClass = minimumPriceDisplay ? getNumberSizeClasses(minimumPriceDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
   const actualMarginDisplay = result ? `${result.actualMargin.toFixed(2)}%` : ''
-  const actualMarginTextClass = actualMarginDisplay ? getNumberSizeClasses(actualMarginDisplay) : 'text-3xl md:text-4xl'
+  const actualMarginTextClass = actualMarginDisplay ? getNumberSizeClasses(actualMarginDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
   const maxDiscountDisplay = result && isFinite(result.maxDiscount) ? `${Math.max(0, result.maxDiscount).toFixed(2)}%` : ''
-  const maxDiscountTextClass = maxDiscountDisplay ? getNumberSizeClasses(maxDiscountDisplay) : 'text-3xl md:text-4xl'
+  const maxDiscountTextClass = maxDiscountDisplay ? getNumberSizeClasses(maxDiscountDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
 
   const revenueDisplay = result ? formatBRL((Math.max(result.actualMargin, 0) / 100) * serviceValueNumber) : ''
   const revenueTextClass = revenueDisplay ? getSmallNumberSizeClasses(revenueDisplay) : 'text-base md:text-lg'
@@ -485,45 +512,75 @@ export const MarginCalculator = () => {
   const serviceValueTextClass = serviceValueDisplay ? getSmallNumberSizeClasses(serviceValueDisplay) : 'text-base md:text-lg'
 
   return (
-    <div className="space-y-6 mx-auto scroll-smooth">
-      <Card className="border text-card-foreground bg-white rounded-xl shadow-lg p-3 sm:p-6 md:p-8">
-        <CardHeader className="p-0 sm:p-6 pb-12 text-center">
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-[1.45] md:leading-[1.35] overflow-visible">
-            <span className="inline-flex flex-wrap items-baseline justify-center gap-3 overflow-visible">
-              <Calculator className="h-7 w-7 text-primary" />
-              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-block leading-[inherit] pb-[2px] overflow-visible whitespace-normal break-words">
+    <div className="space-y-8 mx-auto scroll-smooth">
+      {/* Main calculator card */}
+      <Card className="border-0 rounded-2xl shadow-medium overflow-hidden">
+        {/* Accent bar */}
+        <div className="h-1.5 bg-gradient-to-r from-primary via-primary-light to-accent-warm" />
+
+        <CardHeader className="px-5 sm:px-8 pt-8 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
                 Calculadora de Margem
-              </span>
-            </span>
-          </h2>
-          <p className="text-sm md:text-base text-muted-foreground mt-2">
-            Preencha os campos e veja seus números em tempo real.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 px-3">
-            <Badge variant="secondary" className="text-[11px]">
-              {selectedTemplate.name}
-            </Badge>
-            <Badge variant="secondary" className="text-[11px]">Tempo real</Badge>
-            <Badge variant="secondary" className="text-[11px]">Sem planilhas</Badge>
-            <button
-              type="button"
-              onClick={goBackToTemplates}
-              className="text-xs text-primary hover:underline flex items-center gap-1 ml-2"
-            >
-              <ArrowLeft className="h-3 w-3" /> Trocar modelo
-            </button>
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="secondary" className="text-xs">
+                  {selectedTemplate.name}
+                </Badge>
+                <button
+                  type="button"
+                  onClick={goBackToTemplates}
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-3 w-3" /> Trocar modelo
+                </button>
+              </div>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left: Inputs */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Valor do Serviço */}
-              <div className="space-y-2">
+
+        <CardContent className="px-5 sm:px-8 pb-8 space-y-8">
+          {/* Valor do Serviço */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="serviceValue" className="text-sm font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Valor do Serviço
+              </Label>
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-left">
+                    Preço que você pretende cobrar do cliente.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="relative max-w-md">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">R$</span>
+              <Input
+                id="serviceValue"
+                placeholder="0,00"
+                value={serviceValue}
+                onChange={(e) => handleServiceValueChange(e.target.value)}
+                className="pl-12 h-14 text-xl font-semibold rounded-xl border-2"
+                inputMode="numeric"
+              />
+            </div>
+          </div>
+
+          {/* Margem desejada */}
+          <div className="p-5 sm:p-6 bg-secondary/50 rounded-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              <div className="flex-1 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="serviceValue" className="text-sm font-medium flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    Valor do Serviço
+                  <Label htmlFor="desiredMargin" className="text-sm font-medium">
+                    Margem desejada
                   </Label>
                   <TooltipProvider delayDuration={100}>
                     <Tooltip>
@@ -533,181 +590,11 @@ export const MarginCalculator = () => {
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs text-left">
-                        Preço que você pretende cobrar do cliente.
+                        Percentual de lucro-alvo. Usada para calcular o preço mínimo e o desconto máximo. Não altera a sua margem atual.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                  <Input
-                    id="serviceValue"
-                    placeholder="0,00"
-                    value={serviceValue}
-                    onChange={(e) => handleServiceValueChange(e.target.value)}
-                    className="pl-10 h-12 text-lg"
-                    inputMode="numeric"
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic cost items */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Itens de custo</Label>
-                {costItems.map((item) => (
-                  <div key={item.id} className="flex items-start gap-2 p-3 border rounded-lg bg-muted/20">
-                    <div className="flex-1 space-y-2">
-                      <Input
-                        value={item.label}
-                        onChange={(e) => handleCostItemChange(item.id, 'label', e.target.value)}
-                        className="font-medium text-sm h-8"
-                        placeholder="Nome do item"
-                      />
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Badge variant="secondary" className="text-[10px]">{typeLabel(item.type)}</Badge>
-                      </div>
-                      {item.type === 'currency' && (
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                          <Input
-                            placeholder="0,00"
-                            value={item.value}
-                            onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
-                            className="pl-10"
-                            inputMode="numeric"
-                          />
-                        </div>
-                      )}
-                      {item.type === 'hours_rate' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="text-xs text-muted-foreground">Horas</span>
-                            <Input
-                              type="number"
-                              step="1"
-                              min="0"
-                              placeholder="0"
-                              value={item.value}
-                              onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <span className="text-xs text-muted-foreground">R$/h</span>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                              <Input
-                                placeholder="0,00"
-                                value={item.rate}
-                                onChange={(e) => handleCostItemChange(item.id, 'rate', e.target.value)}
-                                className="pl-10"
-                                inputMode="numeric"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {item.type === 'quantity_price' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="text-xs text-muted-foreground">Quantidade</span>
-                            <Input
-                              type="number"
-                              step="1"
-                              min="0"
-                              placeholder="0"
-                              value={item.value}
-                              onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <span className="text-xs text-muted-foreground">Preço unit.</span>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                              <Input
-                                placeholder="0,00"
-                                value={item.rate}
-                                onChange={(e) => handleCostItemChange(item.id, 'rate', e.target.value)}
-                                className="pl-10"
-                                inputMode="numeric"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive shrink-0 mt-1"
-                      onClick={() => removeCostItem(item.id)}
-                      aria-label={`Remover ${item.label}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-
-                {/* Add item form */}
-                {showAddItem ? (
-                  <div className="p-3 border rounded-lg bg-muted/20 space-y-2">
-                    <Input
-                      placeholder="Nome do item de custo"
-                      value={newItemLabel}
-                      onChange={(e) => setNewItemLabel(e.target.value)}
-                      autoFocus
-                    />
-                    <Select value={newItemType} onValueChange={(v) => setNewItemType(v as CostItemType)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="currency">Valor (R$)</SelectItem>
-                        <SelectItem value="hours_rate">Horas x R$/h</SelectItem>
-                        <SelectItem value="quantity_price">Qtd x Preço unit.</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={addCostItem} disabled={!newItemLabel.trim()}>
-                        Adicionar
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setShowAddItem(false); setNewItemLabel('') }}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full flex items-center gap-2"
-                    onClick={() => setShowAddItem(true)}
-                  >
-                    <Plus className="h-4 w-4" /> Adicionar item de custo
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Margin + summary panel */}
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="desiredMargin" className="text-sm font-medium flex items-center gap-2">
-                  Margem desejada
-                </Label>
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
-                        <HelpCircle className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs text-left">
-                      Percentual de lucro-alvo. Usada para calcular o preço mínimo e o desconto máximo. Não altera a sua margem atual.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="flex items-center gap-3">
                 <Slider
                   value={[Number(desiredMargin) || 0]}
                   min={0}
@@ -715,39 +602,176 @@ export const MarginCalculator = () => {
                   step={5}
                   onValueChange={(v) => handleMarginChange(String(v[0]))}
                   aria-label="Margem desejada"
-                  className="flex-1"
                 />
-                <span className="text-lg font-bold text-primary min-w-[60px] text-right">
-                  {desiredMargin}%
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {[10, 20, 30, 40, 50, 60].map((p) => (
-                  <MarginPreset key={p} value={p} />
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">Recomendado: 30% a 50%.</p>
-              <Separator />
-              <div className="text-sm space-y-1">
-                {costItems.map((item) => {
-                  const val = costItemValue(item, parseCurrency)
-                  const display = item.type === 'currency'
-                    ? formatBRL(val)
-                    : item.type === 'hours_rate'
-                      ? `${Number(item.value) || 0}h x ${formatBRL(parseCurrency(item.rate))}`
-                      : `${Number(item.value) || 0} x ${formatBRL(parseCurrency(item.rate))}`
-                  return (
-                    <div key={item.id} className="flex justify-between gap-3">
-                      <span className="text-muted-foreground truncate">{item.label}</span>
-                      <span className="font-medium break-words whitespace-normal text-right">{renderBreakable(display)}</span>
-                    </div>
-                  )
-                })}
-                <Separator />
-                <div className="flex justify-between font-medium gap-3">
-                  <span className="text-muted-foreground">Custo total</span>
-                  <span className="font-semibold break-words whitespace-normal text-right">{renderBreakable(formatBRL(totalCostNumber))}</span>
+                <div className="flex flex-wrap gap-2">
+                  {[10, 20, 30, 40, 50, 60].map((p) => (
+                    <MarginPreset key={p} value={p} />
+                  ))}
                 </div>
+                <p className="text-xs text-muted-foreground">Recomendado: 30% a 50%.</p>
+              </div>
+              <div className="text-center sm:text-right">
+                <span className="text-2xl font-bold text-primary">{desiredMargin}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cost items */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Itens de custo</Label>
+            {costItems.map((item) => (
+              <div key={item.id} className="p-4 sm:p-5 bg-secondary/30 rounded-xl border border-border/50">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      value={item.label}
+                      onChange={(e) => handleCostItemChange(item.id, 'label', e.target.value)}
+                      className="font-medium text-sm h-8"
+                      placeholder="Nome do item"
+                    />
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="secondary" className="text-[10px]">{typeLabel(item.type)}</Badge>
+                    </div>
+                    {item.type === 'currency' && (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                        <Input
+                          placeholder="0,00"
+                          value={item.value}
+                          onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
+                          className="pl-10"
+                          inputMode="numeric"
+                        />
+                      </div>
+                    )}
+                    {item.type === 'hours_rate' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Horas</span>
+                          <Input
+                            type="number"
+                            step="1"
+                            min="0"
+                            placeholder="0"
+                            value={item.value}
+                            onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">R$/h</span>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                            <Input
+                              placeholder="0,00"
+                              value={item.rate}
+                              onChange={(e) => handleCostItemChange(item.id, 'rate', e.target.value)}
+                              className="pl-10"
+                              inputMode="numeric"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {item.type === 'quantity_price' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Quantidade</span>
+                          <Input
+                            type="number"
+                            step="1"
+                            min="0"
+                            placeholder="0"
+                            value={item.value}
+                            onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Preço unit.</span>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                            <Input
+                              placeholder="0,00"
+                              value={item.rate}
+                              onChange={(e) => handleCostItemChange(item.id, 'rate', e.target.value)}
+                              className="pl-10"
+                              inputMode="numeric"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive shrink-0 mt-1"
+                    onClick={() => removeCostItem(item.id)}
+                    aria-label={`Remover ${item.label}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            {showAddItem ? (
+              <div className="p-4 sm:p-5 bg-secondary/30 rounded-xl border border-border/50 space-y-2">
+                <Input
+                  placeholder="Nome do item de custo"
+                  value={newItemLabel}
+                  onChange={(e) => setNewItemLabel(e.target.value)}
+                  autoFocus
+                />
+                <Select value={newItemType} onValueChange={(v) => setNewItemType(v as CostItemType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="currency">Valor (R$)</SelectItem>
+                    <SelectItem value="hours_rate">Horas x R$/h</SelectItem>
+                    <SelectItem value="quantity_price">Qtd x Preço unit.</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={addCostItem} disabled={!newItemLabel.trim()}>
+                    Adicionar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setShowAddItem(false); setNewItemLabel('') }}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full flex items-center gap-2 border-dashed border-2 h-12 rounded-xl hover:bg-secondary/30"
+                onClick={() => setShowAddItem(true)}
+              >
+                <Plus className="h-4 w-4" /> Adicionar item de custo
+              </Button>
+            )}
+          </div>
+
+          {/* Cost summary */}
+          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/10 p-5 sm:p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {costItems.map((item) => {
+                const val = costItemValue(item, parseCurrency)
+                const display = item.type === 'currency'
+                  ? formatBRL(val)
+                  : item.type === 'hours_rate'
+                    ? `${Number(item.value) || 0}h x ${formatBRL(parseCurrency(item.rate))}`
+                    : `${Number(item.value) || 0} x ${formatBRL(parseCurrency(item.rate))}`
+                return (
+                  <div key={item.id} className="space-y-0.5">
+                    <span className="text-xs text-muted-foreground truncate block">{item.label}</span>
+                    <span className="text-sm font-medium break-words">{renderBreakable(display)}</span>
+                  </div>
+                )
+              })}
+              <div className="space-y-0.5 col-span-2 md:col-span-1">
+                <span className="text-xs text-muted-foreground">Custo total</span>
+                <span className="text-sm font-bold block">{renderBreakable(formatBRL(totalCostNumber))}</span>
               </div>
             </div>
           </div>
@@ -758,84 +782,84 @@ export const MarginCalculator = () => {
         </CardContent>
       </Card>
 
+      {/* Results */}
       {result && (
-        <Card className="border text-card-foreground bg-white rounded-xl shadow-lg p-3 sm:p-6 animate-fade-in">
-          <CardHeader className="p-0 sm:p-6 text-center pb-8">
-            <CardTitle className="flex items-center justify-center gap-3">
-              <Badge variant={getStatusColor(result.status)} className="px-4 py-2 text-base md:text-lg">
-                <span className="inline-flex items-center gap-1">
-                  {getStatusIcon(result.status)}
-                  {result.message}
+        <Card className="border-0 rounded-2xl shadow-medium overflow-hidden animate-fade-in">
+          {/* Status banner */}
+          <div className={`px-5 sm:px-8 py-4 flex items-center gap-3 border-b ${getStatusBg(result.status)}`}>
+            {getStatusIcon(result.status)}
+            <span className="font-semibold text-sm sm:text-base">{result.message}</span>
+          </div>
+
+          <CardContent className="px-5 sm:px-8 py-8 space-y-8">
+            {/* 3 metric cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Preço mínimo */}
+              <div className="p-6 rounded-xl bg-secondary/40 text-center">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Preço mínimo
                 </span>
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 sm:p-6 space-y-6">
-            <div className="p-4 border rounded-lg bg-muted/20">
-              <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border">
-                <div className="min-h-[24px] flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground leading-snug">Preço mínimo com margem desejada</span>
+                <div className={`${minPriceTextClass} font-extrabold text-primary mt-2 break-words`}>
+                  {isFinite(result.minimumPrice) ? renderBreakable(minimumPriceDisplay) : 'indefinido'}
                 </div>
-                <div className="min-h-[24px] flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground leading-snug">% Margem</span>
-                </div>
-                <div className="min-h-[24px] flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground leading-snug">Desconto máximo mantendo a margem desejada</span>
-                </div>
+                <span className="text-xs text-muted-foreground mt-1 block">
+                  com margem de {desiredMargin}%
+                </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border mt-0">
-                <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className={`${minPriceTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>
-                    {isFinite(result.minimumPrice) ? renderBreakable(minimumPriceDisplay) : 'indefinido'}
-                  </span>
+
+              {/* Margem atual */}
+              <div className={`p-6 rounded-xl text-center ${getMarginBg(result.status)}`}>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Margem atual
+                </span>
+                <div className={`${actualMarginTextClass} font-extrabold mt-2 break-words ${getMarginColor(result.status)}`}>
+                  {renderBreakable(actualMarginDisplay)}
                 </div>
-                <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className={`${actualMarginTextClass} font-extrabold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'} break-words text-balance whitespace-normal`}>
-                    {renderBreakable(actualMarginDisplay)}
-                  </span>
+                <span className="text-xs text-muted-foreground mt-1 block">
+                  sobre {formatBRL(serviceValueNumber)}
+                </span>
+              </div>
+
+              {/* Desconto máximo */}
+              <div className="p-6 rounded-xl bg-secondary/40 text-center">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Desconto máximo
+                </span>
+                <div className={`${maxDiscountTextClass} font-extrabold text-primary mt-2 break-words`}>
+                  {isFinite(result.maxDiscount) ? renderBreakable(maxDiscountDisplay) : 'indefinido'}
                 </div>
-                <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className={`${maxDiscountTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>
-                    {isFinite(result.maxDiscount) ? renderBreakable(maxDiscountDisplay) : 'indefinido'}
-                  </span>
-                </div>
+                <span className="text-xs text-muted-foreground mt-1 block">
+                  mantendo {desiredMargin}% de margem
+                </span>
               </div>
             </div>
 
-            <div className="p-4 border rounded-lg bg-muted/20">
-              <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border">
-                <div className="min-h-[24px] flex items-center justify-center">
-                  <span className="text-sm text-muted-foreground leading-snug">Receita (margem)</span>
-                </div>
-                <div className="min-h-[24px] flex items-center justify-center">
-                  <span className="text-sm text-muted-foreground leading-snug">Custo total</span>
-                </div>
-                <div className="min-h-[24px] flex items-center justify-center">
-                  <span className="text-sm text-muted-foreground leading-snug">Valor do serviço</span>
-                </div>
+            {/* Secondary metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 rounded-xl bg-secondary/20">
+                <span className="text-sm text-muted-foreground block">Receita (margem)</span>
+                <span className={`${revenueTextClass} font-bold ${getMarginColor(result.status)} break-words`}>
+                  {renderBreakable(revenueDisplay)}
+                </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border mt-0">
-                <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className={`${revenueTextClass} font-bold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'} break-words whitespace-normal`}>
-                    {renderBreakable(revenueDisplay)}
-                  </span>
-                </div>
-                <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className={`${totalCostTextClass} font-bold break-words whitespace-normal`}>
-                    {renderBreakable(totalCostDisplay)}
-                  </span>
-                </div>
-                <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className={`${serviceValueTextClass} font-bold break-words whitespace-normal`}>
-                    {renderBreakable(serviceValueDisplay)}
-                  </span>
-                </div>
+              <div className="text-center p-4 rounded-xl bg-secondary/20">
+                <span className="text-sm text-muted-foreground block">Custo total</span>
+                <span className={`${totalCostTextClass} font-bold break-words`}>
+                  {renderBreakable(totalCostDisplay)}
+                </span>
+              </div>
+              <div className="text-center p-4 rounded-xl bg-secondary/20">
+                <span className="text-sm text-muted-foreground block">Valor do serviço</span>
+                <span className={`${serviceValueTextClass} font-bold break-words`}>
+                  {renderBreakable(serviceValueDisplay)}
+                </span>
               </div>
             </div>
 
-            <Accordion type="single" collapsible className="p-4 border rounded-lg bg-muted/30">
+            {/* Calculation details */}
+            <Accordion type="single" collapsible className="p-4 border rounded-xl bg-secondary/20">
               <AccordionItem value="calc-details" className="border-b-0">
-                <AccordionTrigger>Detalhes do cálculo</AccordionTrigger>
+                <AccordionTrigger className="font-semibold">Detalhes do cálculo</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-3 text-sm">
                     <div>
@@ -893,6 +917,7 @@ export const MarginCalculator = () => {
               </AccordionItem>
             </Accordion>
 
+            {/* Save section */}
             <div className="max-w-md mx-auto w-full">
               <Label htmlFor="simulationName" className="text-sm">Nome da simulação <span className="text-destructive">*</span></Label>
               <Input
@@ -926,7 +951,7 @@ export const MarginCalculator = () => {
                 <Button
                   variant="default"
                   size="lg"
-                  className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-8 flex items-center gap-2"
+                  className="w-full sm:w-auto justify-center px-8 flex items-center gap-2"
                   onClick={handleSave}
                   disabled={isSaving || !simulationName.trim()}
                 >
@@ -941,7 +966,7 @@ export const MarginCalculator = () => {
       )}
 
       {!result && (
-        <Card className="border text-card-foreground bg-white rounded-xl shadow-md p-3 sm:p-8 text-center">
+        <Card className="border-0 rounded-2xl shadow-soft p-6 sm:p-8 text-center">
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Calculator className="h-8 w-8" />
             <p className="text-sm">Preencha os campos acima para ver o resultado do cálculo.</p>

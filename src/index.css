@@ -2,69 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Margem Forte Design System - Professional Blue Theme
-All colors MUST be HSL for consistency and theming support.
+/* Margem Forte Design System — Indigo + Amber Premium Theme
+   All colors MUST be HSL for consistency and theming support.
 */
 
 @layer base {
   :root {
-    /* Professional Blue Palette */
-    --primary: 220 70% 45%;          /* Deep blue #2563a8 */
-    --primary-dark: 220 70% 35%;     /* Darker blue */
-    --primary-light: 220 55% 55%;    /* Lighter blue */
+    /* Primary: Indigo profundo */
+    --primary: 235 55% 38%;
+    --primary-dark: 235 55% 28%;
+    --primary-light: 235 45% 55%;
     --primary-foreground: 0 0% 98%;
 
+    /* Accent: Amber/Gold quente */
+    --accent: 38 92% 50%;
+    --accent-foreground: 38 95% 15%;
+
     /* Success & Growth Colors */
-    --success: 142 76% 36%;       /* Vibrant green #16a34a */
-    --success-light: 142 69% 58%; /* Light success green */
+    --success: 142 76% 36%;
+    --success-light: 142 69% 58%;
     --success-foreground: 0 0% 100%;
 
     /* Warning & Caution Colors */
-    --warning: 45 93% 47%;        /* Amber #fbbf24 */
-    --warning-light: 45 93% 70%;  /* Light warning */
+    --warning: 45 93% 47%;
+    --warning-light: 45 93% 70%;
     --warning-foreground: 45 95% 15%;
 
     /* Danger & Loss Colors */
-    --destructive: 0 84% 60%;     /* Red #ef4444 */
+    --destructive: 0 84% 60%;
     --destructive-light: 0 84% 75%;
     --destructive-foreground: 0 0% 98%;
 
-    /* Neutral Palette */
-    --background: 0 0% 100%;
-    --foreground: 220 9% 10%;
+    /* Neutral Palette — tom quente */
+    --background: 40 20% 98%;
+    --foreground: 235 20% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 9% 10%;
+    --card-foreground: 235 20% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 9% 10%;
+    --popover-foreground: 235 20% 12%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 220 9% 10%;
+    --secondary: 235 20% 96%;
+    --secondary-foreground: 235 20% 12%;
 
-    --muted: 210 40% 96%;
+    --muted: 235 15% 95%;
     --muted-foreground: 215 14% 46%;
 
-    --accent: 220 60% 94%;          /* Very light blue accent */
-    --accent-foreground: 220 70% 45%;
+    --border: 235 15% 90%;
+    --input: 235 15% 90%;
+    --ring: 235 55% 38%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 220 70% 45%;
-
-    /* Design System Extensions */
-    --radius: 0.75rem;
+    /* Radius generoso */
+    --radius: 1rem;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
-    --gradient-primary-dark: linear-gradient(135deg, hsl(var(--primary-dark)), hsl(var(--primary)));
+    --gradient-primary: linear-gradient(135deg, hsl(235 55% 38%), hsl(255 50% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(235 55% 20%), hsl(255 45% 35%));
+    --gradient-warm: linear-gradient(135deg, hsl(38 95% 54%), hsl(28 95% 60%));
+    --gradient-surface: linear-gradient(180deg, hsl(235 15% 98%), hsl(235 10% 95%));
     --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--success-light)));
-    --gradient-field: linear-gradient(180deg, hsl(220 30% 97%), hsl(220 20% 94%));
 
-    /* Professional Shadows */
-    --shadow-soft: 0 4px 12px -2px hsl(var(--primary) / 0.08);
-    --shadow-medium: 0 8px 24px -4px hsl(var(--primary) / 0.12);
-    --shadow-strong: 0 12px 32px -8px hsl(var(--primary) / 0.16);
+    /* Shadows com tom indigo */
+    --shadow-soft: 0 4px 12px -2px hsl(235 55% 38% / 0.06), 0 2px 6px -1px hsl(235 55% 38% / 0.04);
+    --shadow-medium: 0 8px 24px -4px hsl(235 55% 38% / 0.10), 0 4px 12px -2px hsl(235 55% 38% / 0.06);
+    --shadow-strong: 0 16px 40px -8px hsl(235 55% 38% / 0.14), 0 8px 20px -4px hsl(235 55% 38% / 0.08);
+    --shadow-glow: 0 0 20px hsl(235 55% 38% / 0.15);
 
     /* Smooth Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

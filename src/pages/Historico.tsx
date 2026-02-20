@@ -41,6 +41,12 @@ function downloadFile(content: string, filename: string, type: string) {
   URL.revokeObjectURL(url)
 }
 
+function getMarginBadgeClasses(margin: number): string {
+  if (margin >= 20) return 'bg-success/10 text-success border-success/20'
+  if (margin >= 10) return 'bg-warning/10 text-warning-foreground border-warning/20'
+  return 'bg-destructive/10 text-destructive border-destructive/20'
+}
+
 const Historico = () => {
   const navigate = useNavigate()
   const [rows, setRows] = useState<SavedCalculation[]>([])
@@ -96,55 +102,63 @@ const Historico = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-secondary/50 to-background">
       <Header />
-      <main className="max-w-5xl mx-auto px-3 sm:p-6 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <div className="hidden sm:flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Histórico</h2>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-3">
+              <History className="h-7 w-7 text-primary" />
+              Histórico
+            </h2>
+            <p className="text-muted-foreground text-sm mt-1">Suas simulações salvas</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportJSON} className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={handleExportJSON} className="flex items-center gap-1 rounded-full">
               <Download className="h-3 w-3" /> JSON
             </Button>
-            <Button variant="outline" size="sm" onClick={handleExportCSV} className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="flex items-center gap-1 rounded-full">
               <Download className="h-3 w-3" /> CSV
             </Button>
-            <Button variant="default" onClick={() => navigate('/')} className="flex items-center gap-2">
+            <Button variant="default" onClick={() => navigate('/')} className="flex items-center gap-2 rounded-full">
               <Plus className="h-4 w-4" /> Nova simulação
             </Button>
           </div>
         </div>
 
-        <Card className="bg-white rounded-xl shadow-lg p-3 sm:p-6">
-          <CardHeader className="p-0 sm:p-6">
+        {/* Card with accent bar */}
+        <Card className="border-0 rounded-2xl shadow-medium overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-primary via-primary-light to-accent-warm" />
+
+          <CardHeader className="px-5 sm:px-8 pt-6 pb-2">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <CardTitle className="text-base">Simulações salvas</CardTitle>
-              <div className="w-full md:max-w-xs mb-4 md:mb-0">
+              <CardTitle className="text-base font-semibold">Simulações salvas</CardTitle>
+              <div className="w-full md:max-w-xs">
                 <Input
                   placeholder="Buscar por nome da simulação..."
                   value={search}
                   onChange={(e) => { setPage(1); setSearch(e.target.value) }}
+                  className="rounded-xl"
                 />
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0 sm:p-6">
+          <CardContent className="px-5 sm:px-8 pb-6">
             {rows.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nenhuma simulação salva ainda.</div>
+              <div className="text-sm text-muted-foreground py-8 text-center">Nenhuma simulação salva ainda.</div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-xl border border-border/50 overflow-hidden">
                 <Table className="min-w-[640px] sm:min-w-[720px] md:min-w-0 md:w-full md:table-auto">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="md:w-[28%] md:px-3">Nome</TableHead>
-                      <TableHead className="md:w-[14%] md:px-3">Modelo</TableHead>
-                      <TableHead className="md:w-[14%] md:px-3">Criado em</TableHead>
-                      <TableHead className="md:w-[14%] md:px-3">Valor do serviço</TableHead>
-                      <TableHead className="md:w-[14%] md:px-3">Custo total</TableHead>
-                      <TableHead className="md:w-[6%] md:px-3">Margem</TableHead>
-                      <TableHead className="md:w-[10%] md:px-3 text-right">Ações</TableHead>
+                    <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                      <TableHead className="md:w-[28%] md:px-4 uppercase tracking-wider text-xs font-semibold">Nome</TableHead>
+                      <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Modelo</TableHead>
+                      <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Criado em</TableHead>
+                      <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Valor do serviço</TableHead>
+                      <TableHead className="md:w-[14%] md:px-4 uppercase tracking-wider text-xs font-semibold">Custo total</TableHead>
+                      <TableHead className="md:w-[6%] md:px-4 uppercase tracking-wider text-xs font-semibold">Margem</TableHead>
+                      <TableHead className="md:w-[10%] md:px-4 text-right uppercase tracking-wider text-xs font-semibold">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -152,16 +166,20 @@ const Historico = () => {
                       const created = new Date(r.createdAt)
                       const createdFmt = created.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
                       return (
-                        <TableRow key={r.id} className="cursor-pointer" onClick={() => navigate(`/?id=${r.id}`)}>
-                          <TableCell className="md:p-3 align-top">
+                        <TableRow key={r.id} className="cursor-pointer hover:bg-secondary/30 border-border/40" onClick={() => navigate(`/?id=${r.id}`)}>
+                          <TableCell className="md:p-4 align-top">
                             <div className="font-medium break-words whitespace-normal">{r.name || 'Sem nome'}</div>
                           </TableCell>
-                          <TableCell className="md:p-3 align-top text-xs text-muted-foreground">{r.templateId}</TableCell>
-                          <TableCell className="md:p-3 align-top whitespace-normal">{createdFmt}</TableCell>
-                          <TableCell className="md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(r.serviceValue)}</TableCell>
-                          <TableCell className="md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(r.totalCost)}</TableCell>
-                          <TableCell className="md:p-3 align-top break-all whitespace-normal text-right">{r.actualMargin.toFixed(0)}%</TableCell>
-                          <TableCell className="md:p-3 align-top text-right">
+                          <TableCell className="md:p-4 align-top text-xs text-muted-foreground">{r.templateId}</TableCell>
+                          <TableCell className="md:p-4 align-top whitespace-normal text-sm">{createdFmt}</TableCell>
+                          <TableCell className="md:p-4 align-top break-all whitespace-normal text-right text-sm">{formatBRL(r.serviceValue)}</TableCell>
+                          <TableCell className="md:p-4 align-top break-all whitespace-normal text-right text-sm">{formatBRL(r.totalCost)}</TableCell>
+                          <TableCell className="md:p-4 align-top text-right">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold ${getMarginBadgeClasses(r.actualMargin)}`}>
+                              {r.actualMargin.toFixed(0)}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="md:p-4 align-top text-right">
                             <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                               <Button
                                 variant="ghost"
@@ -216,7 +234,7 @@ const Historico = () => {
                 </Table>
               </div>
             )}
-            <div className="mt-3 space-y-3">
+            <div className="mt-4 space-y-3">
               <div className="text-xs text-muted-foreground">
                 Dica: clique em uma linha para abrir a simulação.
               </div>
