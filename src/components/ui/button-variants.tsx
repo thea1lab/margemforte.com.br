@@ -14,10 +14,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        // Custom agricultural variants
         success: "bg-gradient-success text-success-foreground shadow-medium hover:shadow-strong transform hover:scale-[1.02]",
         warning: "bg-warning text-warning-foreground shadow-medium hover:bg-warning/90",
-        agricultural: "bg-gradient-primary text-primary-foreground shadow-medium hover:shadow-strong transform hover:scale-[1.02]",
         calculator: "bg-accent text-accent-foreground border-2 border-primary/20 hover:border-primary/40 hover:bg-accent/80",
       },
       size: {

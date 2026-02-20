@@ -6,27 +6,44 @@ import { Button } from '@/components/ui/button-variants'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
-import { History, ExternalLink, Plus } from 'lucide-react'
+import { History, ExternalLink, Plus, Trash2, Download, Copy } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { toast } from '@/components/ui/sonner'
+import {
+  listCalculations,
+  deleteCalculation,
+  exportCalculationsJSON,
+  exportCalculationsCSV,
+  exportCalculationText,
+} from '@/lib/storage'
+import type { SavedCalculation } from '@/lib/storage'
 
-type HistoryRow = {
-  id: string
-  created_at: string
-  simulation_name: string
-  service_value: number
-  travel_costs: number
-  hours_worked: number
-  hourly_rate: number
-  materials: number
-  desired_margin: number
+const formatBRL = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+
+function downloadFile(content: string, filename: string, type: string) {
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
-
-const formatBRL = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 
 const Historico = () => {
   const navigate = useNavigate()
-  const [rows, setRows] = useState<HistoryRow[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [rows, setRows] = useState<SavedCalculation[]>([])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -38,28 +55,45 @@ const Historico = () => {
     return () => clearTimeout(id)
   }, [search])
 
+  const loadData = () => {
+    const { data, total: t } = listCalculations({ page, pageSize, search: debouncedSearch })
+    setRows(data)
+    setTotal(t)
+  }
+
   useEffect(() => {
-    let isCancelled = false
-    const load = async () => {
-      try {
-        setIsLoading(true)
-        const { listCalculatorHistoryPaged } = await import('@/integrations/supabase/calculatorHistory')
-        const { data, count } = await listCalculatorHistoryPaged({ page, pageSize, search: debouncedSearch })
-        if (!isCancelled) {
-          setRows(data || [])
-          setTotal(count || 0)
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(e)
-        if (!isCancelled) setError('Não foi possível carregar o histórico.')
-      } finally {
-        if (!isCancelled) setIsLoading(false)
-      }
-    }
-    load()
-    return () => { isCancelled = true }
+    loadData()
   }, [page, pageSize, debouncedSearch])
+
+  const handleDelete = (id: string, name: string) => {
+    deleteCalculation(id)
+    toast.success('Simulação excluída', { description: name })
+    loadData()
+  }
+
+  const handleCopyText = (id: string) => {
+    const text = exportCalculationText(id)
+    if (text) {
+      navigator.clipboard.writeText(text)
+      toast.success('Resumo copiado para a área de transferência')
+    }
+  }
+
+  const handleExportJSON = () => {
+    const json = exportCalculationsJSON()
+    downloadFile(json, 'margemforte_historico.json', 'application/json')
+    toast.success('JSON exportado')
+  }
+
+  const handleExportCSV = () => {
+    const csv = exportCalculationsCSV()
+    if (!csv) {
+      toast.error('Nenhuma simulação para exportar')
+      return
+    }
+    downloadFile(csv, 'margemforte_historico.csv', 'text/csv')
+    toast.success('CSV exportado')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -70,9 +104,17 @@ const Historico = () => {
             <History className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-semibold">Histórico</h2>
           </div>
-          <Button variant="default" onClick={() => navigate('/') } className="w-full sm:w-auto justify-center flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Nova simulação
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportJSON} className="flex items-center gap-1">
+              <Download className="h-3 w-3" /> JSON
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="flex items-center gap-1">
+              <Download className="h-3 w-3" /> CSV
+            </Button>
+            <Button variant="default" onClick={() => navigate('/')} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Nova simulação
+            </Button>
+          </div>
         </div>
 
         <Card className="bg-white rounded-xl shadow-lg p-3 sm:p-6">
@@ -89,49 +131,83 @@ const Historico = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0 sm:p-6">
-            {isLoading ? (
-              <div className="text-sm text-muted-foreground">Carregando...</div>
-            ) : error ? (
-              <div className="text-sm text-destructive">{error}</div>
-            ) : rows.length === 0 ? (
+            {rows.length === 0 ? (
               <div className="text-sm text-muted-foreground">Nenhuma simulação salva ainda.</div>
             ) : (
               <div className="rounded-md border">
                 <Table className="min-w-[640px] sm:min-w-[720px] md:min-w-0 md:w-full md:table-auto">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="md:w-[32%] md:px-3">Nome</TableHead>
-                      <TableHead className="md:w-[18%] md:px-3">Criado em</TableHead>
-                      <TableHead className="md:w-[16%] md:px-3">Valor do serviço</TableHead>
-                      <TableHead className="md:w-[16%] md:px-3">Custo total</TableHead>
-                      <TableHead className="md:w-[7%] md:px-3">Margem</TableHead>
-                      <TableHead className="md:w-[7%] md:px-3 text-right">Ações</TableHead>
+                      <TableHead className="md:w-[28%] md:px-3">Nome</TableHead>
+                      <TableHead className="md:w-[14%] md:px-3">Modelo</TableHead>
+                      <TableHead className="md:w-[14%] md:px-3">Criado em</TableHead>
+                      <TableHead className="md:w-[14%] md:px-3">Valor do serviço</TableHead>
+                      <TableHead className="md:w-[14%] md:px-3">Custo total</TableHead>
+                      <TableHead className="md:w-[6%] md:px-3">Margem</TableHead>
+                      <TableHead className="md:w-[10%] md:px-3 text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {rows.map((r) => {
-                      const totalCost = (r.travel_costs || 0) + (r.materials || 0) + (r.hours_worked || 0) * (r.hourly_rate || 0)
-                      const created = new Date(r.created_at)
+                      const created = new Date(r.createdAt)
                       const createdFmt = created.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
                       return (
                         <TableRow key={r.id} className="cursor-pointer" onClick={() => navigate(`/?id=${r.id}`)}>
-                          <TableCell className="md:w-[32%] md:p-3 align-top">
-                            <div className="font-medium break-words whitespace-normal">{r.simulation_name || 'Sem nome'}</div>
+                          <TableCell className="md:p-3 align-top">
+                            <div className="font-medium break-words whitespace-normal">{r.name || 'Sem nome'}</div>
                           </TableCell>
-                          <TableCell className="md:w-[18%] md:p-3 align-top whitespace-normal">{createdFmt}</TableCell>
-                          <TableCell className="md:w-[16%] md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(r.service_value)}</TableCell>
-                          <TableCell className="md:w-[16%] md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(totalCost)}</TableCell>
-                          <TableCell className="md:w-[7%] md:p-3 align-top break-all whitespace-normal text-right">{(r.desired_margin ?? 0).toFixed(0)}%</TableCell>
-                          <TableCell className="md:w-[7%] md:p-3 align-top text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="inline-flex items-center gap-2"
-                              onClick={(e) => { e.stopPropagation(); navigate(`/?id=${r.id}`) }}
-                              aria-label="Abrir Simulação"
-                            >
-                              <ExternalLink className="h-4 w-4" /> Abrir
-                            </Button>
+                          <TableCell className="md:p-3 align-top text-xs text-muted-foreground">{r.templateId}</TableCell>
+                          <TableCell className="md:p-3 align-top whitespace-normal">{createdFmt}</TableCell>
+                          <TableCell className="md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(r.serviceValue)}</TableCell>
+                          <TableCell className="md:p-3 align-top break-all whitespace-normal text-right">{formatBRL(r.totalCost)}</TableCell>
+                          <TableCell className="md:p-3 align-top break-all whitespace-normal text-right">{r.actualMargin.toFixed(0)}%</TableCell>
+                          <TableCell className="md:p-3 align-top text-right">
+                            <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleCopyText(r.id)}
+                                aria-label="Copiar resumo"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="inline-flex items-center gap-1"
+                                onClick={() => navigate(`/?id=${r.id}`)}
+                                aria-label="Abrir Simulação"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Abrir
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    aria-label="Excluir simulação"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir simulação?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      A simulação "{r.name}" será excluída permanentemente.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(r.id, r.name)}>
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )
@@ -178,5 +254,3 @@ const Historico = () => {
 }
 
 export default Historico
-
-

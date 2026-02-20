@@ -11,18 +11,51 @@ import {
   AlertTriangle,
   CheckCircle2,
   DollarSign,
-  Clock,
-  Package,
-  Car,
-  Percent,
   HelpCircle,
-  Save
+  Save,
+  Plus,
+  Trash2,
+  ArrowLeft,
+  Wrench,
+  CakeSlice,
+  Briefcase,
+  Palette,
+  Monitor,
+  Settings,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { InlineMath, BlockMath } from 'react-katex'
+import { BlockMath } from 'react-katex'
 import { toast } from '@/components/ui/sonner'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { templates, getTemplate } from '@/lib/templates'
+import type { Template } from '@/lib/templates'
+import { saveCalculation, updateCalculation, getCalculation } from '@/lib/storage'
+import type { CostItemType } from '@/lib/storage'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const iconMap: Record<string, React.ElementType> = {
+  Wrench,
+  CakeSlice,
+  Briefcase,
+  Palette,
+  Monitor,
+  Settings,
+}
+
+interface CostItem {
+  id: string
+  label: string
+  type: CostItemType
+  value: string  // raw input string
+  rate: string   // raw input string (for hours_rate / quantity_price)
+}
 
 interface CalculationResult {
   totalCost: number
@@ -33,74 +66,71 @@ interface CalculationResult {
   message: string
 }
 
+function costItemValue(item: CostItem, parseCurrency: (v: string) => number): number {
+  if (item.type === 'currency') return parseCurrency(item.value)
+  if (item.type === 'hours_rate') return (Number(item.value) || 0) * parseCurrency(item.rate)
+  // quantity_price
+  return (Number(item.value) || 0) * parseCurrency(item.rate)
+}
+
 export const MarginCalculator = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [inputs, setInputs] = useState({
-    serviceValue: '',
-    travelCosts: '',
-    hoursWorked: '',
-    hourlyRate: '',
-    materials: '',
-    desiredMargin: '20'
-  })
 
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [costItems, setCostItems] = useState<CostItem[]>([])
+  const [serviceValue, setServiceValue] = useState('')
+  const [desiredMargin, setDesiredMargin] = useState('20')
   const [result, setResult] = useState<CalculationResult | null>(null)
-  const [hasEdited, setHasEdited] = useState(false)
   const [simulationName, setSimulationName] = useState('')
-
   const [isSaving, setIsSaving] = useState(false)
   const [nameError, setNameError] = useState<string | null>(null)
   const [hasSavedOnce, setHasSavedOnce] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [simulationId, setSimulationId] = useState<string | null>(null)
+  const [showAddItem, setShowAddItem] = useState(false)
+  const [newItemLabel, setNewItemLabel] = useState('')
+  const [newItemType, setNewItemType] = useState<CostItemType>('currency')
 
+  // Load simulation by ID from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const id = params.get('id')
-    if (id) setSimulationId(id)
-  }, [location.search])
-
-  useEffect(() => {
-    if (!simulationId) return
-    let isCancelled = false
-    const loadSimulation = async () => {
-      try {
-        const { getCalculatorHistoryById } = await import('@/integrations/supabase/calculatorHistory')
-        const data = await getCalculatorHistoryById(simulationId)
-        if (isCancelled || !data) return
-        setSimulationName(data.simulation_name ?? '')
-        setInputs({
-          serviceValue: formatNumberToInput(data.service_value ?? 0),
-          travelCosts: formatNumberToInput(data.travel_costs ?? 0),
-          hoursWorked: String(data.hours_worked ?? ''),
-          hourlyRate: formatNumberToInput(data.hourly_rate ?? 0),
-          materials: formatNumberToInput(data.materials ?? 0),
-          desiredMargin: String(data.desired_margin ?? '20')
-        })
-        setHasEdited(false)
+    if (id) {
+      setSimulationId(id)
+      const data = getCalculation(id)
+      if (data) {
+        setSimulationName(data.name)
+        setServiceValue(formatNumberToInput(data.serviceValue))
+        setDesiredMargin(String(data.desiredMargin))
+        const tpl = getTemplate(data.templateId)
+        setSelectedTemplate(tpl ?? templates[templates.length - 1]) // fallback to personalizado
+        setCostItems(
+          data.costItems.map((ci) => ({
+            id: ci.id,
+            label: ci.label,
+            type: ci.type,
+            value: ci.type === 'currency' ? formatNumberToInput(ci.value) : String(ci.value || ''),
+            rate: ci.type !== 'currency' ? formatNumberToInput(ci.rate) : '',
+          }))
+        )
         setHasSavedOnce(true)
         setHasUnsavedChanges(false)
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error(err)
-        toast.error('Não foi possível carregar a simulação', {
-          description: 'Verifique o link ou tente novamente.'
+      } else {
+        toast.error('Simulação não encontrada', {
+          description: 'Verifique o link ou tente novamente.',
         })
       }
     }
-    loadSimulation()
-    return () => { isCancelled = true }
-  }, [simulationId])
+  }, [location.search])
 
   const formatCurrency = (value: string): string => {
     const numericValue = value.replace(/\D/g, '')
-    const formattedValue = new Intl.NumberFormat('pt-BR', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'decimal',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(Number(numericValue) / 100)
-    return formattedValue
   }
 
   const parseCurrency = (value: string): number => {
@@ -111,39 +141,115 @@ export const MarginCalculator = () => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'decimal',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(Number(value) || 0)
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    if (['serviceValue', 'travelCosts', 'hourlyRate', 'materials'].includes(field)) {
-      const formatted = formatCurrency(value)
-      setInputs(prev => ({ ...prev, [field]: formatted }))
-    } else {
-      setInputs(prev => ({ ...prev, [field]: value }))
+  const formatBRL = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+
+  const markUnsaved = () => {
+    if (hasSavedOnce && !hasUnsavedChanges) {
+      setHasUnsavedChanges(true)
     }
-    if (!hasEdited) setHasEdited(true)
-    if (hasSavedOnce && !hasUnsavedChanges) setHasUnsavedChanges(true)
   }
 
-  const calculateMargin = (): CalculationResult => {
-    const serviceValue = parseCurrency(inputs.serviceValue)
-    const travelCosts = parseCurrency(inputs.travelCosts)
-    const hoursWorked = Number(inputs.hoursWorked) || 0
-    const hourlyRate = parseCurrency(inputs.hourlyRate)
-    const materials = parseCurrency(inputs.materials)
-    const desiredMargin = Math.min(100, Math.max(0, Number(inputs.desiredMargin) || 0))
+  const handleServiceValueChange = (value: string) => {
+    setServiceValue(formatCurrency(value))
+    markUnsaved()
+  }
 
-    const totalCost = travelCosts + hoursWorked * hourlyRate + materials
-    const denominator = 1 - desiredMargin / 100
+  const handleMarginChange = (value: string) => {
+    setDesiredMargin(value)
+    markUnsaved()
+  }
+
+  const handleCostItemChange = (id: string, field: 'label' | 'value' | 'rate', value: string) => {
+    setCostItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item
+        if (field === 'value') {
+          if (item.type === 'currency') return { ...item, value: formatCurrency(value) }
+          return { ...item, value }
+        }
+        if (field === 'rate') return { ...item, rate: formatCurrency(value) }
+        return { ...item, [field]: value }
+      })
+    )
+    markUnsaved()
+  }
+
+  const removeCostItem = (id: string) => {
+    setCostItems((prev) => prev.filter((item) => item.id !== id))
+    markUnsaved()
+  }
+
+  const addCostItem = () => {
+    if (!newItemLabel.trim()) return
+    setCostItems((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        label: newItemLabel.trim(),
+        type: newItemType,
+        value: '',
+        rate: '',
+      },
+    ])
+    setNewItemLabel('')
+    setNewItemType('currency')
+    setShowAddItem(false)
+    markUnsaved()
+  }
+
+  // Select template and populate default cost items
+  const selectTemplate = (tpl: Template) => {
+    setSelectedTemplate(tpl)
+    setCostItems(
+      tpl.defaultCostItems.map((di) => ({
+        id: crypto.randomUUID(),
+        label: di.label,
+        type: di.type,
+        value: '',
+        rate: '',
+      }))
+    )
+    setServiceValue('')
+    setDesiredMargin('20')
+    setSimulationName('')
+    setSimulationId(null)
+    setHasSavedOnce(false)
+    setHasUnsavedChanges(false)
+    navigate('/', { replace: true })
+  }
+
+  const goBackToTemplates = () => {
+    setSelectedTemplate(null)
+    setCostItems([])
+    setServiceValue('')
+    setDesiredMargin('20')
+    setResult(null)
+    setSimulationName('')
+    setNameError(null)
+    setHasUnsavedChanges(false)
+    setHasSavedOnce(false)
+    setSimulationId(null)
+    navigate('/', { replace: true })
+  }
+
+  // Calculate results
+  const calculateMargin = (): CalculationResult => {
+    const svc = parseCurrency(serviceValue)
+    const totalCost = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
+    const margin = Math.min(100, Math.max(0, Number(desiredMargin) || 0))
+    const denominator = 1 - margin / 100
     const minimumPrice = denominator <= 0 ? Number.POSITIVE_INFINITY : totalCost / denominator
-    const safeServiceValue = serviceValue > 0 ? serviceValue : 1 // prevent division by zero
-    const maxDiscount = ((serviceValue - minimumPrice) / safeServiceValue) * 100
-    const actualMargin = ((serviceValue - totalCost) / safeServiceValue) * 100
+    const safeSvc = svc > 0 ? svc : 1
+    const maxDiscount = ((svc - minimumPrice) / safeSvc) * 100
+    const actualMargin = ((svc - totalCost) / safeSvc) * 100
 
     let status: CalculationResult['status'] = 'safe'
     let message = ''
-
     if (actualMargin >= 20) {
       status = 'safe'
       message = 'Excelente margem de lucro!'
@@ -155,26 +261,75 @@ export const MarginCalculator = () => {
       message = 'Alerta: risco de prejuízo'
     }
 
-    return {
-      totalCost,
-      minimumPrice,
-      maxDiscount,
-      actualMargin,
-      status,
-      message
-    }
+    return { totalCost, minimumPrice, maxDiscount, actualMargin, status, message }
   }
 
   useEffect(() => {
-    const svc = parseCurrency(inputs.serviceValue)
-    if (svc > 0) {
-      const calculatedResult = calculateMargin()
-      setResult(calculatedResult)
+    if (parseCurrency(serviceValue) > 0) {
+      setResult(calculateMargin())
     } else {
       setResult(null)
     }
-  }, [inputs])
+  }, [serviceValue, desiredMargin, costItems])
 
+  const handleSave = () => {
+    if (!result) return
+    if (!simulationName.trim()) {
+      setNameError('Campo obrigatório')
+      document.getElementById('simulationName')?.focus()
+      return
+    }
+    try {
+      setIsSaving(true)
+      const payload = {
+        name: simulationName.trim(),
+        templateId: selectedTemplate?.id ?? 'personalizado',
+        costItems: costItems.map((ci) => ({
+          id: ci.id,
+          label: ci.label,
+          type: ci.type,
+          value: ci.type === 'currency' ? parseCurrency(ci.value) : Number(ci.value) || 0,
+          rate: ci.type !== 'currency' ? parseCurrency(ci.rate) : 0,
+        })),
+        serviceValue: parseCurrency(serviceValue),
+        desiredMargin: Math.min(100, Math.max(0, Number(desiredMargin) || 0)),
+        totalCost: result.totalCost,
+        minimumPrice: result.minimumPrice,
+        actualMargin: result.actualMargin,
+        maxDiscount: result.maxDiscount,
+      }
+
+      if (simulationId) {
+        updateCalculation(simulationId, payload)
+      } else {
+        const saved = saveCalculation(payload)
+        if (saved?.id) {
+          const params = new URLSearchParams(location.search)
+          params.set('id', saved.id)
+          navigate({ pathname: location.pathname, search: params.toString() }, { replace: true })
+          setSimulationId(saved.id)
+        }
+      }
+      toast.success('Simulação salva com sucesso', {
+        description: simulationName || 'A simulação foi salva no histórico.',
+      })
+      setHasSavedOnce(true)
+      setHasUnsavedChanges(false)
+    } catch (err) {
+      console.error(err)
+      toast.error('Não foi possível salvar', { description: 'Tente novamente em instantes.' })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const resetForm = () => {
+    if (selectedTemplate) {
+      selectTemplate(selectedTemplate)
+    }
+  }
+
+  // --- Helpers for display ---
   const getStatusColor = (status: CalculationResult['status']) => {
     switch (status) {
       case 'safe': return 'success'
@@ -193,14 +348,6 @@ export const MarginCalculator = () => {
     }
   }
 
-  const formatBRL = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value)
-  }
-
-  // Picks a smaller text size when the number string is very long
   const getNumberSizeClasses = (text: string): string => {
     const length = text.replace(/[\s\u00A0]/g, '').length
     if (length <= 12) return 'text-3xl md:text-3xl'
@@ -209,7 +356,6 @@ export const MarginCalculator = () => {
     return 'text-lg md:text-lg'
   }
 
-  // Same idea but for smaller base sizes used in the second row of values
   const getSmallNumberSizeClasses = (text: string): string => {
     const length = text.replace(/[\s\u00A0]/g, '').length
     if (length <= 12) return 'text-base md:text-lg'
@@ -218,7 +364,6 @@ export const MarginCalculator = () => {
     return 'text-[10px] md:text-xs'
   }
 
-  // Render text with <wbr> soft-break hints after thousand separators and before '%'
   const renderBreakable = (text: string): JSX.Element => {
     const dotParts = text.split('.')
     const nodes: Array<string | JSX.Element> = []
@@ -242,79 +387,15 @@ export const MarginCalculator = () => {
     return <>{nodes}</>
   }
 
-  const resetForm = () => {
-    setInputs({
-      serviceValue: '',
-      travelCosts: '',
-      hoursWorked: '',
-      hourlyRate: '',
-      materials: '',
-      desiredMargin: '20'
-    })
-    setHasEdited(false)
-    setSimulationName('')
-    setNameError(null)
-    setHasUnsavedChanges(false)
-    setHasSavedOnce(false)
-    setSimulationId(null)
-    navigate('/', { replace: true })
-  }
-
-  const handleSave = async () => {
-    if (!result) return
-    if (!simulationName.trim()) {
-      setNameError('Campo obrigatório')
-      const el = document.getElementById('simulationName') as HTMLInputElement | null
-      el?.focus()
-      return
-    }
-    try {
-      setIsSaving(true)
-      const { saveCalculatorHistory, updateCalculatorHistory } = await import('@/integrations/supabase/calculatorHistory')
-      const payload = {
-        simulation_name: simulationName || 'Simulação sem nome',
-        service_value: parseCurrency(inputs.serviceValue),
-        travel_costs: parseCurrency(inputs.travelCosts),
-        hours_worked: Number(inputs.hoursWorked) || 0,
-        hourly_rate: parseCurrency(inputs.hourlyRate),
-        materials: parseCurrency(inputs.materials),
-        desired_margin: Math.min(100, Math.max(0, Number(inputs.desiredMargin) || 0))
-      }
-
-      let saved
-      if (simulationId) {
-        saved = await updateCalculatorHistory(simulationId, payload)
-      } else {
-        saved = await saveCalculatorHistory(payload)
-        if (saved?.id) {
-          const params = new URLSearchParams(location.search)
-          params.set('id', saved.id)
-          navigate({ pathname: location.pathname, search: params.toString() }, { replace: true })
-          setSimulationId(saved.id)
-        }
-      }
-      toast.success('Simulação salva com sucesso', {
-        description: simulationName || 'A simulação foi salva no histórico.'
-      })
-      setHasSavedOnce(true)
-      setHasUnsavedChanges(false)
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(err)
-      toast.error('Não foi possível salvar', { description: 'Tente novamente em instantes.' })
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const MarginPreset = ({ value }: { value: number }) => (
     <button
       type="button"
-      onClick={() => handleInputChange('desiredMargin', String(value))}
-      className={`px-3 py-1 rounded-full border text-xs transition ${Number(inputs.desiredMargin) === value
+      onClick={() => handleMarginChange(String(value))}
+      className={`px-3 py-1 rounded-full border text-xs transition ${
+        Number(desiredMargin) === value
           ? 'bg-primary text-white border-primary'
           : 'hover:bg-muted border-border'
-        }`}
+      }`}
       tabIndex={-1}
       aria-hidden="true"
       aria-label={`Definir margem em ${value}%`}
@@ -323,107 +404,72 @@ export const MarginCalculator = () => {
     </button>
   )
 
-  const renderMoneyInput = (
-    id: string,
-    label: string,
-    value: string,
-    onChange: (val: string) => void,
-    icon?: JSX.Element,
-    placeholder: string = '0,00',
-    extraClassName?: string,
-    helpText?: string,
-    belowNode?: JSX.Element
-  ) => (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Label htmlFor={id} className="text-sm font-medium flex items-center gap-2">
-          {icon}
-          {label}
-        </Label>
-        {helpText && (
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={`Dica: ${label}`} tabIndex={-1} aria-hidden="true">
-                  <HelpCircle className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-left">
-                {helpText}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-        <Input
-          id={id}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={`pl-10 ${extraClassName ?? ''}`}
-          inputMode="numeric"
-          aria-describedby={helpText ? `${id}-desc` : undefined}
-        />
-      </div>
-      {helpText && (
-        <span id={`${id}-desc`} className="sr-only">{helpText}</span>
-      )}
-      {belowNode && <div className="mt-[-3px]">{belowNode}</div>}
-    </div>
-  )
+  const typeLabel = (type: CostItemType) => {
+    switch (type) {
+      case 'currency': return 'Valor (R$)'
+      case 'hours_rate': return 'Horas x R$/h'
+      case 'quantity_price': return 'Qtd x Preço unit.'
+    }
+  }
 
-  const renderNumberInput = (
-    id: string,
-    label: string,
-    value: string,
-    onChange: (val: string) => void,
-    icon?: JSX.Element,
-    step: string = '1',
-    min: string = '0',
-    placeholder: string = '0',
-    helpText?: string
-  ) => (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Label htmlFor={id} className="text-sm font-medium flex items-center gap-2">
-          {icon}
-          {label}
-        </Label>
-        {helpText && (
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label={`Dica: ${label}`} tabIndex={-1} aria-hidden="true">
-                  <HelpCircle className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-left">
-                {helpText}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+  // Template selection screen
+  if (!selectedTemplate) {
+    return (
+      <div className="space-y-6">
+        <Card className="border text-card-foreground bg-white rounded-xl shadow-lg p-3 sm:p-6 md:p-8">
+          <CardHeader className="p-0 sm:p-6 pb-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-[1.45] md:leading-[1.35]">
+              <span className="inline-flex flex-wrap items-baseline justify-center gap-3">
+                <Calculator className="h-7 w-7 text-primary" />
+                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent inline-block leading-[inherit] pb-[2px]">
+                  Calculadora de Margem
+                </span>
+              </span>
+            </h2>
+            <p className="text-sm md:text-base text-muted-foreground mt-2">
+              Escolha o modelo que mais se encaixa no seu negócio.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.map((tpl) => {
+                const Icon = iconMap[tpl.icon] ?? Settings
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => selectTemplate(tpl)}
+                    className="flex flex-col items-center gap-3 p-6 border rounded-xl bg-white hover:border-primary hover:shadow-md transition-all text-center group cursor-pointer"
+                  >
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-foreground">{tpl.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{tpl.description}</div>
+                    </div>
+                    {tpl.defaultCostItems.length > 0 && (
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {tpl.defaultCostItems.map((ci) => (
+                          <Badge key={ci.label} variant="secondary" className="text-[10px]">
+                            {ci.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <Input
-        id={id}
-        type="number"
-        step={step}
-        min={min}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-describedby={helpText ? `${id}-desc` : undefined}
-      />
-      {helpText && (
-        <span id={`${id}-desc`} className="sr-only">{helpText}</span>
-      )}
-    </div>
-  )
+    )
+  }
 
-  const serviceValueNumber = parseCurrency(inputs.serviceValue)
-  const totalCostNumber = (parseCurrency(inputs.travelCosts) + parseCurrency(inputs.materials) + (Number(inputs.hoursWorked) || 0) * parseCurrency(inputs.hourlyRate))
+  // Calculator screen
+  const serviceValueNumber = parseCurrency(serviceValue)
+  const totalCostNumber = costItems.reduce((sum, item) => sum + costItemValue(item, parseCurrency), 0)
   const minimumPriceDisplay = result && isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : ''
   const minPriceTextClass = minimumPriceDisplay ? getNumberSizeClasses(minimumPriceDisplay) : 'text-3xl md:text-4xl'
   const actualMarginDisplay = result ? `${result.actualMargin.toFixed(2)}%` : ''
@@ -437,23 +483,6 @@ export const MarginCalculator = () => {
   const totalCostTextClass = totalCostDisplay ? getSmallNumberSizeClasses(totalCostDisplay) : 'text-base md:text-lg'
   const serviceValueDisplay = result ? formatBRL(serviceValueNumber) : ''
   const serviceValueTextClass = serviceValueDisplay ? getSmallNumberSizeClasses(serviceValueDisplay) : 'text-base md:text-lg'
-
-  const minPriceBreakable = minimumPriceDisplay ? renderBreakable(minimumPriceDisplay) : null
-  const actualMarginBreakable = actualMarginDisplay ? renderBreakable(actualMarginDisplay) : null
-  const maxDiscountBreakable = maxDiscountDisplay ? renderBreakable(maxDiscountDisplay) : null
-  const revenueBreakable = revenueDisplay ? renderBreakable(revenueDisplay) : null
-  const totalCostBreakable = totalCostDisplay ? renderBreakable(totalCostDisplay) : null
-  const serviceValueBreakable = serviceValueDisplay ? renderBreakable(serviceValueDisplay) : null
-
-  // Breakable values for the right info panel (Deslocamento/Materiais/Horas x R$/h/Custo total)
-  const travelCostsDisplay = formatBRL(parseCurrency(inputs.travelCosts))
-  const travelCostsBreakable = renderBreakable(travelCostsDisplay)
-  const materialsDisplay = formatBRL(parseCurrency(inputs.materials))
-  const materialsBreakable = renderBreakable(materialsDisplay)
-  const hoursTimesRateDisplay = `${Number(inputs.hoursWorked) || 0} x ${formatBRL(parseCurrency(inputs.hourlyRate))}`
-  const hoursTimesRateBreakable = renderBreakable(hoursTimesRateDisplay)
-  const totalCostPanelDisplay = formatBRL(totalCostNumber)
-  const totalCostPanelBreakable = renderBreakable(totalCostPanelDisplay)
 
   return (
     <div className="space-y-6 mx-auto scroll-smooth">
@@ -471,73 +500,195 @@ export const MarginCalculator = () => {
             Preencha os campos e veja seus números em tempo real.
           </p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 px-3">
+            <Badge variant="secondary" className="text-[11px]">
+              {selectedTemplate.name}
+            </Badge>
             <Badge variant="secondary" className="text-[11px]">Tempo real</Badge>
-            <Badge variant="secondary" className="text-[11px]">Fácil de usar</Badge>
             <Badge variant="secondary" className="text-[11px]">Sem planilhas</Badge>
+            <button
+              type="button"
+              onClick={goBackToTemplates}
+              className="text-xs text-primary hover:underline flex items-center gap-1 ml-2"
+            >
+              <ArrowLeft className="h-3 w-3" /> Trocar modelo
+            </button>
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Inputs */}
             <div className="lg:col-span-2 space-y-4">
-              {renderMoneyInput(
-                'serviceValue',
-                'Valor do Serviço',
-                inputs.serviceValue,
-                (v) => handleInputChange('serviceValue', v),
-                <DollarSign className="h-4 w-4 text-muted-foreground" />,
-                '0,00',
-                'h-12 text-lg',
-                'Preço que você pretende cobrar do cliente por este serviço.'
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderMoneyInput(
-                  'travelCosts',
-                  'Deslocamento',
-                  inputs.travelCosts,
-                  (v) => handleInputChange('travelCosts', v),
-                  <Car className="h-4 w-4 text-muted-foreground" />,
-                  '0,00',
-                  'h-12 text-lg',
-                  'Custos com transporte, combustível, pedágio ou estadia relacionados ao serviço.'
-                )}
-                {renderMoneyInput(
-                  'materials',
-                  'Materiais',
-                  inputs.materials,
-                  (v) => handleInputChange('materials', v),
-                  <Package className="h-4 w-4 text-muted-foreground" />,
-                  '0,00',
-                  'h-12 text-lg',
-                  'Gastos com peças, insumos e materiais necessários para executar o serviço.'
-                )}
+              {/* Valor do Serviço */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="serviceValue" className="text-sm font-medium flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    Valor do Serviço
+                  </Label>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-left">
+                        Preço que você pretende cobrar do cliente.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    id="serviceValue"
+                    placeholder="0,00"
+                    value={serviceValue}
+                    onChange={(e) => handleServiceValueChange(e.target.value)}
+                    className="pl-10 h-12 text-lg"
+                    inputMode="numeric"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderNumberInput(
-                  'hoursWorked',
-                  'Horas',
-                  inputs.hoursWorked,
-                  (v) => handleInputChange('hoursWorked', v),
-                  <Clock className="h-4 w-4 text-muted-foreground" />,
-                  '1',
-                  '0',
-                  '0',
-                  'Quantidade total de horas estimadas para realizar o serviço.'
-                )}
-                {renderMoneyInput(
-                  'hourlyRate',
-                  'R$/h',
-                  inputs.hourlyRate,
-                  (v) => handleInputChange('hourlyRate', v),
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />,
-                  '0,00',
-                  'h-12 text-lg',
-                  'Quanto você cobra por hora de trabalho.'
+              {/* Dynamic cost items */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Itens de custo</Label>
+                {costItems.map((item) => (
+                  <div key={item.id} className="flex items-start gap-2 p-3 border rounded-lg bg-muted/20">
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        value={item.label}
+                        onChange={(e) => handleCostItemChange(item.id, 'label', e.target.value)}
+                        className="font-medium text-sm h-8"
+                        placeholder="Nome do item"
+                      />
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="text-[10px]">{typeLabel(item.type)}</Badge>
+                      </div>
+                      {item.type === 'currency' && (
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                          <Input
+                            placeholder="0,00"
+                            value={item.value}
+                            onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
+                            className="pl-10"
+                            inputMode="numeric"
+                          />
+                        </div>
+                      )}
+                      {item.type === 'hours_rate' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-xs text-muted-foreground">Horas</span>
+                            <Input
+                              type="number"
+                              step="1"
+                              min="0"
+                              placeholder="0"
+                              value={item.value}
+                              onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">R$/h</span>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                              <Input
+                                placeholder="0,00"
+                                value={item.rate}
+                                onChange={(e) => handleCostItemChange(item.id, 'rate', e.target.value)}
+                                className="pl-10"
+                                inputMode="numeric"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {item.type === 'quantity_price' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-xs text-muted-foreground">Quantidade</span>
+                            <Input
+                              type="number"
+                              step="1"
+                              min="0"
+                              placeholder="0"
+                              value={item.value}
+                              onChange={(e) => handleCostItemChange(item.id, 'value', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">Preço unit.</span>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                              <Input
+                                placeholder="0,00"
+                                value={item.rate}
+                                onChange={(e) => handleCostItemChange(item.id, 'rate', e.target.value)}
+                                className="pl-10"
+                                inputMode="numeric"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive shrink-0 mt-1"
+                      onClick={() => removeCostItem(item.id)}
+                      aria-label={`Remover ${item.label}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {/* Add item form */}
+                {showAddItem ? (
+                  <div className="p-3 border rounded-lg bg-muted/20 space-y-2">
+                    <Input
+                      placeholder="Nome do item de custo"
+                      value={newItemLabel}
+                      onChange={(e) => setNewItemLabel(e.target.value)}
+                      autoFocus
+                    />
+                    <Select value={newItemType} onValueChange={(v) => setNewItemType(v as CostItemType)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="currency">Valor (R$)</SelectItem>
+                        <SelectItem value="hours_rate">Horas x R$/h</SelectItem>
+                        <SelectItem value="quantity_price">Qtd x Preço unit.</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={addCostItem} disabled={!newItemLabel.trim()}>
+                        Adicionar
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setShowAddItem(false); setNewItemLabel('') }}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center gap-2"
+                    onClick={() => setShowAddItem(true)}
+                  >
+                    <Plus className="h-4 w-4" /> Adicionar item de custo
+                  </Button>
                 )}
               </div>
             </div>
 
+            {/* Right: Margin + summary panel */}
             <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
               <div className="flex items-center gap-2">
                 <Label htmlFor="desiredMargin" className="text-sm font-medium flex items-center gap-2">
@@ -546,7 +697,7 @@ export const MarginCalculator = () => {
                 <TooltipProvider delayDuration={100}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Dica: Margem desejada" tabIndex={-1} aria-hidden="true">
+                      <button type="button" className="text-muted-foreground hover:text-foreground" tabIndex={-1} aria-hidden="true">
                         <HelpCircle className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
@@ -558,20 +709,18 @@ export const MarginCalculator = () => {
               </div>
               <div className="flex items-center gap-3">
                 <Slider
-                  value={[Number(inputs.desiredMargin) || 0]}
+                  value={[Number(desiredMargin) || 0]}
                   min={0}
                   max={100}
                   step={5}
-                  onValueChange={(v) => handleInputChange('desiredMargin', String(v[0]))}
+                  onValueChange={(v) => handleMarginChange(String(v[0]))}
                   aria-label="Margem desejada"
-                  aria-describedby="desiredMargin-desc"
                   className="flex-1"
                 />
                 <span className="text-lg font-bold text-primary min-w-[60px] text-right">
-                  {inputs.desiredMargin}%
+                  {desiredMargin}%
                 </span>
               </div>
-              <span id="desiredMargin-desc" className="sr-only">Margem de lucro-alvo (sobre o preço). Define o preço mínimo e o desconto máximo, não altera a sua margem atual. Use as setas do teclado para ajustar.</span>
               <div className="flex flex-wrap gap-2">
                 {[10, 20, 30, 40, 50, 60].map((p) => (
                   <MarginPreset key={p} value={p} />
@@ -580,22 +729,24 @@ export const MarginCalculator = () => {
               <p className="text-xs text-muted-foreground">Recomendado: 30% a 50%.</p>
               <Separator />
               <div className="text-sm space-y-1">
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Deslocamento</span>
-                  <span className="font-medium break-words whitespace-normal text-right">{travelCostsBreakable}</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Materiais</span>
-                  <span className="font-medium break-words whitespace-normal text-right">{materialsBreakable}</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Horas x R$/h</span>
-                  <span className="break-words whitespace-normal text-right">{hoursTimesRateBreakable}</span>
-                </div>
+                {costItems.map((item) => {
+                  const val = costItemValue(item, parseCurrency)
+                  const display = item.type === 'currency'
+                    ? formatBRL(val)
+                    : item.type === 'hours_rate'
+                      ? `${Number(item.value) || 0}h x ${formatBRL(parseCurrency(item.rate))}`
+                      : `${Number(item.value) || 0} x ${formatBRL(parseCurrency(item.rate))}`
+                  return (
+                    <div key={item.id} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground truncate">{item.label}</span>
+                      <span className="font-medium break-words whitespace-normal text-right">{renderBreakable(display)}</span>
+                    </div>
+                  )
+                })}
                 <Separator />
                 <div className="flex justify-between font-medium gap-3">
                   <span className="text-muted-foreground">Custo total</span>
-                  <span className="font-semibold break-words whitespace-normal text-right">{totalCostPanelBreakable}</span>
+                  <span className="font-semibold break-words whitespace-normal text-right">{renderBreakable(formatBRL(totalCostNumber))}</span>
                 </div>
               </div>
             </div>
@@ -621,7 +772,6 @@ export const MarginCalculator = () => {
           </CardHeader>
           <CardContent className="p-0 sm:p-6 space-y-6">
             <div className="p-4 border rounded-lg bg-muted/20">
-              {/* Row 1: labels */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border">
                 <div className="min-h-[24px] flex items-center justify-center">
                   <span className="text-xs text-muted-foreground leading-snug">Preço mínimo com margem desejada</span>
@@ -633,26 +783,26 @@ export const MarginCalculator = () => {
                   <span className="text-xs text-muted-foreground leading-snug">Desconto máximo mantendo a margem desejada</span>
                 </div>
               </div>
-              {/* Row 2: values */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border mt-0">
                 <div className="h-12 md:h-14 flex items-end justify-center">
-                  <span className={`${minPriceTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>{isFinite(result.minimumPrice) ? minPriceBreakable : 'indefinido'}</span>
+                  <span className={`${minPriceTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>
+                    {isFinite(result.minimumPrice) ? renderBreakable(minimumPriceDisplay) : 'indefinido'}
+                  </span>
                 </div>
                 <div className="h-12 md:h-14 flex items-end justify-center">
                   <span className={`${actualMarginTextClass} font-extrabold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'} break-words text-balance whitespace-normal`}>
-                    {actualMarginBreakable}
+                    {renderBreakable(actualMarginDisplay)}
                   </span>
                 </div>
                 <div className="h-12 md:h-14 flex items-end justify-center">
                   <span className={`${maxDiscountTextClass} font-extrabold text-primary break-words text-balance whitespace-normal`}>
-                    {isFinite(result.maxDiscount) ? maxDiscountBreakable : 'indefinido'}
+                    {isFinite(result.maxDiscount) ? renderBreakable(maxDiscountDisplay) : 'indefinido'}
                   </span>
                 </div>
               </div>
             </div>
 
             <div className="p-4 border rounded-lg bg-muted/20">
-              {/* Row 1: labels */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border">
                 <div className="min-h-[24px] flex items-center justify-center">
                   <span className="text-sm text-muted-foreground leading-snug">Receita (margem)</span>
@@ -664,22 +814,24 @@ export const MarginCalculator = () => {
                   <span className="text-sm text-muted-foreground leading-snug">Valor do serviço</span>
                 </div>
               </div>
-              {/* Row 2: values */}
               <div className="grid grid-cols-1 md:grid-cols-3 text-center md:divide-x md:divide-border mt-0">
                 <div className="h-8 md:h-10 flex items-end justify-center">
                   <span className={`${revenueTextClass} font-bold ${result.status === 'safe' ? 'text-success' : result.status === 'warning' ? 'text-warning' : 'text-destructive'} break-words whitespace-normal`}>
-                    {revenueBreakable}
+                    {renderBreakable(revenueDisplay)}
                   </span>
                 </div>
                 <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className={`${totalCostTextClass} font-bold break-words whitespace-normal`}>{totalCostBreakable}</span>
+                  <span className={`${totalCostTextClass} font-bold break-words whitespace-normal`}>
+                    {renderBreakable(totalCostDisplay)}
+                  </span>
                 </div>
                 <div className="h-8 md:h-10 flex items-end justify-center">
-                  <span className={`${serviceValueTextClass} font-bold break-words whitespace-normal`}>{serviceValueBreakable}</span>
+                  <span className={`${serviceValueTextClass} font-bold break-words whitespace-normal`}>
+                    {renderBreakable(serviceValueDisplay)}
+                  </span>
                 </div>
               </div>
             </div>
-
 
             <Accordion type="single" collapsible className="p-4 border rounded-lg bg-muted/30">
               <AccordionItem value="calc-details" className="border-b-0">
@@ -688,14 +840,20 @@ export const MarginCalculator = () => {
                   <div className="space-y-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">1) Custo total</p>
-                      <p className="mb-1">Objetivo: somar todos os custos do serviço (sem lucro).</p>
+                      <p className="mb-1">Objetivo: somar todos os custos (sem lucro).</p>
                       <div className="overflow-x-auto">
-                        <BlockMath>{String.raw`\text{Custo total} = \text{Deslocamento} + (\text{Horas} \times \text{R\$/h}) + \text{Materiais}`}</BlockMath>
+                        <BlockMath>{String.raw`\text{Custo total} = \sum \text{Itens de custo}`}</BlockMath>
                       </div>
-                      <p className="font-mono">
-                        {formatBRL(parseCurrency(inputs.travelCosts))} + ({Number(inputs.hoursWorked) || 0} × {formatBRL(parseCurrency(inputs.hourlyRate))}) + {formatBRL(parseCurrency(inputs.materials))} = <span className="font-bold">{formatBRL(result.totalCost)}</span>
+                      <div className="font-mono text-xs space-y-0.5">
+                        {costItems.map((item) => (
+                          <div key={item.id}>
+                            {item.label}: {formatBRL(costItemValue(item, parseCurrency))}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="font-mono mt-1">
+                        Total = <span className="font-bold">{formatBRL(result.totalCost)}</span>
                       </p>
-                      <p>O que mostra: quanto você gasta para executar o serviço.</p>
                     </div>
                     <Separator />
                     <div>
@@ -705,9 +863,8 @@ export const MarginCalculator = () => {
                         <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - \text{Margem}}`}</BlockMath>
                       </div>
                       <p className="font-mono">
-                        {formatBRL(result.totalCost)} ÷ (1 − {Number(inputs.desiredMargin) || 0}%) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
+                        {formatBRL(result.totalCost)} / (1 - {Number(desiredMargin) || 0}%) = <span className="font-bold">{isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}</span>
                       </p>
-                      <p>O que mostra: o preço abaixo do qual sua <strong>margem ficará menor</strong> do que a desejada.</p>
                     </div>
                     <Separator />
                     <div>
@@ -717,9 +874,8 @@ export const MarginCalculator = () => {
                         <BlockMath>{String.raw`\%\,\text{Margem} = \dfrac{\text{Valor do serviço} - \text{Custo total}}{\text{Valor do serviço}} \times 100`}</BlockMath>
                       </div>
                       <p className="font-mono">
-                        ({formatBRL(serviceValueNumber)} − {formatBRL(result.totalCost)}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{result.actualMargin.toFixed(1)}%</span>
+                        ({formatBRL(serviceValueNumber)} - {formatBRL(result.totalCost)}) / {formatBRL(serviceValueNumber)} x 100 = <span className="font-bold">{result.actualMargin.toFixed(1)}%</span>
                       </p>
-                      <p>O que mostra: qual parte do preço é lucro. Se negativo, indica prejuízo.</p>
                     </div>
                     <Separator />
                     <div>
@@ -729,9 +885,8 @@ export const MarginCalculator = () => {
                         <BlockMath>{String.raw`\%\,\text{Desconto máx.} = \dfrac{\text{Valor do serviço} - \text{Preço mínimo}}{\text{Valor do serviço}} \times 100`}</BlockMath>
                       </div>
                       <p className="font-mono">
-                        ({formatBRL(serviceValueNumber)} − {isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}) ÷ {formatBRL(serviceValueNumber)} × 100 = <span className="font-bold">{isFinite(result.maxDiscount) ? result.maxDiscount.toFixed(1) : 'indefinido'}%</span>
+                        ({formatBRL(serviceValueNumber)} - {isFinite(result.minimumPrice) ? formatBRL(result.minimumPrice) : 'indefinido'}) / {formatBRL(serviceValueNumber)} x 100 = <span className="font-bold">{isFinite(result.maxDiscount) ? result.maxDiscount.toFixed(1) : 'indefinido'}%</span>
                       </p>
-                      <p>O que mostra: o limite de desconto para não ficar abaixo da margem desejada.</p>
                     </div>
                   </div>
                 </AccordionContent>
@@ -754,11 +909,10 @@ export const MarginCalculator = () => {
                 }}
                 className={`mt-1 ${nameError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 aria-invalid={!!nameError}
-                aria-describedby={nameError ? 'simulationName-error' : undefined}
                 required
               />
               {nameError && (
-                <p id="simulationName-error" className="text-destructive text-xs mt-1">{nameError}</p>
+                <p className="text-destructive text-xs mt-1">{nameError}</p>
               )}
             </div>
 
@@ -795,8 +949,6 @@ export const MarginCalculator = () => {
           </div>
         </Card>
       )}
-
-      {/* FAQ moved to dedicated /faq page */}
     </div>
   )
 }

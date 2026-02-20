@@ -13,8 +13,26 @@ const FAQ = () => {
             <CardTitle className="text-primary">FAQ — Perguntas frequentes</CardTitle>
           </CardHeader>
           <CardContent className="p-0 sm:p-6">
-            <p className="text-sm text-muted-foreground mb-4">Explicações simples sobre margem, preço mínimo, desconto máximo e como preencher os campos. Exemplos incluídos.</p>
+            <p className="text-sm text-muted-foreground mb-4">Explicações simples sobre margem, preço mínimo, desconto máximo e como usar a calculadora. Exemplos incluídos.</p>
             <Accordion type="single" collapsible className="w-full space-y-2">
+              <AccordionItem value="item-templates" className="rounded-lg bg-background/70 border">
+                <AccordionTrigger className="px-3 rounded-lg hover:bg-background/90">O que são os modelos?</AccordionTrigger>
+                <AccordionContent className="px-3 pb-3 text-sm text-muted-foreground space-y-3">
+                  <p>
+                    Os modelos são <strong>templates prontos</strong> para diferentes tipos de negócio (confeitaria, consultoria, freelancer, etc.).
+                    Cada modelo já vem com itens de custo típicos daquele segmento, facilitando o preenchimento.
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Prestador de Serviço</strong>: Deslocamento, Materiais, Mão de obra.</li>
+                    <li><strong>Confeitaria / Doces</strong>: Ingredientes, Embalagem, Gás/Energia, Mão de obra.</li>
+                    <li><strong>Consultoria</strong>: Deslocamento, Materiais, Horas de consultoria.</li>
+                    <li><strong>Produto Artesanal</strong>: Materiais, Embalagem, Mão de obra.</li>
+                    <li><strong>Freelancer / TI</strong>: Ferramentas/Software, Internet, Horas de trabalho.</li>
+                    <li><strong>Personalizado</strong>: vazio — monte seus próprios itens de custo.</li>
+                  </ul>
+                  <p>Você sempre pode adicionar, remover ou renomear itens de custo, independentemente do modelo escolhido.</p>
+                </AccordionContent>
+              </AccordionItem>
               <AccordionItem value="item-1" className="rounded-lg bg-background/70 border">
                 <AccordionTrigger className="px-3 rounded-lg hover:bg-background/90">Para que serve a Margem desejada?</AccordionTrigger>
                 <AccordionContent className="px-3 pb-3 text-sm text-muted-foreground space-y-3">
@@ -48,7 +66,7 @@ const FAQ = () => {
                     <BlockMath>{String.raw`\text{Preço mínimo} = \dfrac{\text{Custo total}}{1 - 1}`}</BlockMath>
                   </div>
                   <p>
-                    Se você pensou em “<strong>dobrar o custo</strong>”, isso não é 100% de margem — é <strong>100% de markup</strong>, que equivale a <strong>50% de margem</strong>.
+                    Se você pensou em "<strong>dobrar o custo</strong>", isso não é 100% de margem — é <strong>100% de markup</strong>, que equivale a <strong>50% de margem</strong>.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -76,28 +94,28 @@ const FAQ = () => {
               <AccordionItem value="item-4" className="rounded-lg bg-background/70 border">
                 <AccordionTrigger className="px-3 rounded-lg hover:bg-background/90">Como preencher os campos?</AccordionTrigger>
                 <AccordionContent className="px-3 pb-3 text-sm text-muted-foreground space-y-2">
+                  <p>Ao escolher um modelo, a calculadora já traz itens de custo típicos do segmento. Cada item pode ser de um destes tipos:</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Valor do Serviço</strong>: quanto você pretende cobrar do cliente.</li>
-                    <li><strong>Deslocamento</strong>: transporte, combustível, pedágio, estadia.</li>
-                    <li><strong>Materiais</strong>: peças e insumos usados no serviço.</li>
-                    <li><strong>Horas</strong>: horas estimadas para executar o serviço.</li>
-                    <li><strong>R$/h</strong>: seu preço por hora de trabalho.</li>
+                    <li><strong>Valor (R$)</strong>: um custo direto em reais (ex.: deslocamento, ingredientes).</li>
+                    <li><strong>Horas x R$/h</strong>: quantidade de horas multiplicada pelo valor por hora (ex.: mão de obra).</li>
+                    <li><strong>Qtd x Preço unit.</strong>: quantidade de unidades vezes preço unitário.</li>
                   </ul>
-                  <p>Dica: Preencha os custos primeiro; depois use a Margem desejada para ver o preço mínimo e o desconto máximo.</p>
+                  <p>Você pode <strong>adicionar</strong>, <strong>remover</strong> ou <strong>renomear</strong> itens livremente.</p>
+                  <p>Preencha também o <strong>Valor do Serviço</strong> (quanto pretende cobrar) e a <strong>Margem desejada</strong> para ver o preço mínimo e o desconto máximo.</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-5" className="rounded-lg bg-background/70 border">
                 <AccordionTrigger className="px-3 rounded-lg hover:bg-background/90">Exemplo prático completo</AccordionTrigger>
                 <AccordionContent className="px-3 pb-3 text-sm text-muted-foreground space-y-3">
+                  <p>Suponha um prestador de serviço com os custos:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Deslocamento: R$ 20</li>
                     <li>Materiais: R$ 30</li>
-                    <li>Horas: 5</li>
-                    <li>R$/h: R$ 10</li>
+                    <li>Mão de obra: 5 horas x R$ 10/h</li>
                   </ul>
                   <p>1) Calcular o custo total:</p>
                   <div className="overflow-x-auto">
-                    <BlockMath>{String.raw`\text{Custo total} = 20 + (5 \times 10) + 30 = 100`}</BlockMath>
+                    <BlockMath>{String.raw`\text{Custo total} = 20 + 30 + (5 \times 10) = 100`}</BlockMath>
                   </div>
                   <p>2) Com margem desejada de 40%, preço mínimo:</p>
                   <div className="overflow-x-auto">
@@ -122,5 +140,3 @@ const FAQ = () => {
 }
 
 export default FAQ
-
-
