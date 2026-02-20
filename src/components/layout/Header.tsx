@@ -30,7 +30,7 @@ export const Header = () => {
               aria-label="Ir para a página inicial"
             >
               <div className="relative h-9 w-9 rounded-xl bg-gradient-to-br from-[hsl(235,55%,38%)] to-[hsl(255,50%,50%)] flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                <TrendingUp className="h-4 w-4 text-white/90" />
+                <TrendingUp className="h-4 w-4 text-white" />
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
               </div>
               <h1 className="text-lg font-bold tracking-tight hidden min-[400px]:block">
@@ -84,7 +84,7 @@ export const Header = () => {
                   <SheetHeader>
                     <SheetTitle className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[hsl(235,55%,38%)] to-[hsl(255,50%,50%)] flex items-center justify-center">
-                        <TrendingUp className="h-3.5 w-3.5 text-white/90" />
+                        <TrendingUp className="h-3.5 w-3.5 text-white" />
                       </div>
                       <span className="font-bold tracking-tight">
                         <span className="text-foreground">Margem</span>
