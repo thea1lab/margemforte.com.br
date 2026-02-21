@@ -22,5 +22,6 @@ npm run dev
 Automatic via GitHub Actions on every push to `main`. Deploys to Cloudflare Workers using Wrangler.
 
 Required GitHub Secrets:
+
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`

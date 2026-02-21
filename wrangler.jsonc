@@ -4,12 +4,12 @@
   "assets": {
     "directory": "./dist",
     "html_handling": "drop-trailing-slash",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
   },
   "routes": [
     {
       "pattern": "margemforte.com.br",
-      "custom_domain": true
-    }
-  ]
+      "custom_domain": true,
+    },
+  ],
 }

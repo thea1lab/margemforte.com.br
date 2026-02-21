@@ -21,7 +21,9 @@ const NotFound = () => {
           <div className="absolute bottom-[-80px] left-[-60px] w-[250px] h-[250px] rounded-full bg-white/5" />
 
           <div className="relative z-10">
-            <h1 className="text-7xl sm:text-8xl font-extrabold text-white tracking-tight">404</h1>
+            <h1 className="text-7xl sm:text-8xl font-extrabold text-white tracking-tight">
+              404
+            </h1>
             <p className="text-xl sm:text-2xl text-white/80 mt-4 font-medium">
               Página não encontrada
             </p>

@@ -8,14 +8,14 @@ Margem Forte is a client-side margin calculator for Brazilian small businesses (
 
 ## Commands
 
-| Task | Command |
-|---|---|
-| Dev server (port 8080) | `npm run dev` |
-| Production build | `npm run build` |
-| Lint | `npm run lint` |
-| Run all tests | `npm run test` |
-| Watch tests | `npm run test:watch` |
-| Run single test file | `npx vitest run src/lib/margin-math.test.ts` |
+| Task                   | Command                                      |
+| ---------------------- | -------------------------------------------- |
+| Dev server (port 8080) | `npm run dev`                                |
+| Production build       | `npm run build`                              |
+| Lint                   | `npm run lint`                               |
+| Run all tests          | `npm run test`                               |
+| Watch tests            | `npm run test:watch`                         |
+| Run single test file   | `npx vitest run src/lib/margin-math.test.ts` |
 
 ## Architecture
 

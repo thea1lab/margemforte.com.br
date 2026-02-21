@@ -57,16 +57,38 @@
     --radius: 1rem;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(235 55% 38%), hsl(255 50% 50%));
-    --gradient-hero: linear-gradient(135deg, hsl(235 55% 20%), hsl(255 45% 35%));
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(235 55% 38%),
+      hsl(255 50% 50%)
+    );
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(235 55% 20%),
+      hsl(255 45% 35%)
+    );
     --gradient-warm: linear-gradient(135deg, hsl(38 95% 54%), hsl(28 95% 60%));
-    --gradient-surface: linear-gradient(180deg, hsl(235 15% 98%), hsl(235 10% 95%));
-    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--success-light)));
+    --gradient-surface: linear-gradient(
+      180deg,
+      hsl(235 15% 98%),
+      hsl(235 10% 95%)
+    );
+    --gradient-success: linear-gradient(
+      135deg,
+      hsl(var(--success)),
+      hsl(var(--success-light))
+    );
 
     /* Shadows com tom indigo */
-    --shadow-soft: 0 4px 12px -2px hsl(235 55% 38% / 0.06), 0 2px 6px -1px hsl(235 55% 38% / 0.04);
-    --shadow-medium: 0 8px 24px -4px hsl(235 55% 38% / 0.10), 0 4px 12px -2px hsl(235 55% 38% / 0.06);
-    --shadow-strong: 0 16px 40px -8px hsl(235 55% 38% / 0.14), 0 8px 20px -4px hsl(235 55% 38% / 0.08);
+    --shadow-soft:
+      0 4px 12px -2px hsl(235 55% 38% / 0.06),
+      0 2px 6px -1px hsl(235 55% 38% / 0.04);
+    --shadow-medium:
+      0 8px 24px -4px hsl(235 55% 38% / 0.1),
+      0 4px 12px -2px hsl(235 55% 38% / 0.06);
+    --shadow-strong:
+      0 16px 40px -8px hsl(235 55% 38% / 0.14),
+      0 8px 20px -4px hsl(235 55% 38% / 0.08);
     --shadow-glow: 0 0 20px hsl(235 55% 38% / 0.15);
 
     /* Smooth Transitions */

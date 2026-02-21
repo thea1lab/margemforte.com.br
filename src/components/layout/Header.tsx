@@ -1,18 +1,30 @@
-import { History, HelpCircle, Menu, Calculator, TrendingUp } from 'lucide-react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import {
+  History,
+  HelpCircle,
+  Menu,
+  Calculator,
+  TrendingUp,
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const navItems = [
-  { path: '/', label: 'Calculadora', icon: Calculator },
-  { path: '/historico', label: 'Histórico', icon: History },
-  { path: '/faq', label: 'FAQ', icon: HelpCircle },
-]
+  { path: "/", label: "Calculadora", icon: Calculator },
+  { path: "/historico", label: "Histórico", icon: History },
+  { path: "/faq", label: "FAQ", icon: HelpCircle },
+];
 
 export const Header = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const isActive = (path: string) => location.pathname === path
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <header className="sticky top-0 z-50">
@@ -23,8 +35,10 @@ export const Header = () => {
             {/* Brand */}
             <div
               className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
-              onClick={() => navigate('/')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/') }}
+              onClick={() => navigate("/")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") navigate("/");
+              }}
               role="link"
               tabIndex={0}
               aria-label="Ir para a página inicial"
@@ -34,8 +48,13 @@ export const Header = () => {
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
               </div>
               <h1 className="text-lg font-bold tracking-tight hidden min-[400px]:block">
-                <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Margem</span>
-                <span className="bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent"> Forte</span>
+                <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Margem
+                </span>
+                <span className="bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
+                  {" "}
+                  Forte
+                </span>
               </h1>
             </div>
 
@@ -43,8 +62,8 @@ export const Header = () => {
             <nav className="hidden sm:flex items-center">
               <div className="flex items-center gap-0.5 bg-secondary/80 rounded-full p-1 shadow-sm border border-border/40">
                 {navItems.map((item) => {
-                  const Icon = item.icon
-                  const active = isActive(item.path)
+                  const Icon = item.icon;
+                  const active = isActive(item.path);
                   return (
                     <button
                       key={item.path}
@@ -53,9 +72,10 @@ export const Header = () => {
                       className={`
                         relative flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium
                         transition-all duration-200 whitespace-nowrap
-                        ${active
-                          ? 'bg-white text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                        ${
+                          active
+                            ? "bg-white text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
                         }
                       `}
                       aria-label={`Ir para ${item.label}`}
@@ -63,7 +83,7 @@ export const Header = () => {
                       <Icon className="h-3.5 w-3.5" />
                       {item.label}
                     </button>
-                  )
+                  );
                 })}
               </div>
             </nav>
@@ -94,8 +114,8 @@ export const Header = () => {
                   </SheetHeader>
                   <div className="mt-8 flex flex-col gap-1">
                     {navItems.map((item) => {
-                      const Icon = item.icon
-                      const active = isActive(item.path)
+                      const Icon = item.icon;
+                      const active = isActive(item.path);
                       return (
                         <button
                           key={item.path}
@@ -104,16 +124,19 @@ export const Header = () => {
                           className={`
                             flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium
                             transition-all duration-150
-                            ${active
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                            ${
+                              active
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                             }
                           `}
                         >
-                          <Icon className={`h-5 w-5 ${active ? 'text-primary' : ''}`} />
+                          <Icon
+                            className={`h-5 w-5 ${active ? "text-primary" : ""}`}
+                          />
                           {item.label}
                         </button>
-                      )
+                      );
                     })}
                   </div>
                 </SheetContent>
@@ -125,5 +148,5 @@ export const Header = () => {
       {/* Bottom gradient accent */}
       <div className="h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
     </header>
-  )
-}
+  );
+};
