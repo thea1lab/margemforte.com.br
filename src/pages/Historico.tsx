@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button-variants'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -103,6 +105,14 @@ const Historico = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary/50 to-background">
+      <Helmet>
+        <title>Histórico de Simulações · Margem Forte</title>
+        <meta name="description" content="Veja e compare suas simulações de margem de lucro salvas. Exporte para CSV ou JSON, copie resumos e gerencie o histórico de precificação do seu negócio." />
+        <link rel="canonical" href="https://margemforte.com.br/historico" />
+        <meta property="og:title" content="Histórico de Simulações · Margem Forte" />
+        <meta property="og:description" content="Compare simulações de margem de lucro salvas e exporte para CSV ou JSON." />
+        <meta property="og:url" content="https://margemforte.com.br/historico" />
+      </Helmet>
       <Header />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* Page header */}
@@ -269,6 +279,7 @@ const Historico = () => {
           </CardContent>
         </Card>
       </main>
+      <Footer />
     </div>
   )
 }

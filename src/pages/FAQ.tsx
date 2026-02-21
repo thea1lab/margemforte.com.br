@@ -1,5 +1,7 @@
+import { Helmet } from 'react-helmet-async'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
 import { BlockMath } from 'react-katex'
 import {
   HelpCircle,
@@ -243,6 +245,14 @@ const faqItems = [
 const FAQ = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary/50 to-background">
+      <Helmet>
+        <title>Como Calcular Margem de Lucro · Perguntas Frequentes · Margem Forte</title>
+        <meta name="description" content="Tire suas dúvidas sobre margem de lucro, markup, impostos (MEI, Simples Nacional), custos fixos e variáveis. Exemplos práticos de precificação para confeiteiros, freelancers e prestadores de serviço." />
+        <link rel="canonical" href="https://margemforte.com.br/faq" />
+        <meta property="og:title" content="Como Calcular Margem de Lucro · Perguntas Frequentes · Margem Forte" />
+        <meta property="og:description" content="Tire suas dúvidas sobre margem de lucro, markup, impostos e precificação. Exemplos práticos para pequenos negócios." />
+        <meta property="og:url" content="https://margemforte.com.br/faq" />
+      </Helmet>
       <Header />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* Hero banner */}
@@ -290,6 +300,7 @@ const FAQ = () => {
           })}
         </Accordion>
       </main>
+      <Footer />
     </div>
   )
 }

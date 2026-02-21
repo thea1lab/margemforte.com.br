@@ -44,21 +44,38 @@ export function calculateMargin(input: MarginInput): MarginResult {
   const denominator = 1 - clampedMargin / 100 - clampedTaxRate / 100
   const minimumPrice = denominator <= 0 ? Number.POSITIVE_INFINITY : totalCost / denominator
   const safeSvc = svc > 0 ? svc : 1
-  const maxDiscount = ((svc - minimumPrice) / safeSvc) * 100
+  const rawMaxDiscount = ((svc - minimumPrice) / safeSvc) * 100
+  const maxDiscount = Math.max(0, rawMaxDiscount)
   const grossMargin = ((svc - totalCost) / safeSvc) * 100
   const netMargin = ((svc - totalCost - taxAmount) / safeSvc) * 100
 
   let status: MarginResult['status'] = 'safe'
   let message = ''
-  if (netMargin >= 20) {
-    status = 'safe'
-    message = 'Excelente margem de lucro!'
-  } else if (netMargin >= 10) {
-    status = 'warning'
-    message = 'Atenção: margem apertada'
+
+  if (clampedMargin > 0) {
+    // Status relative to desired margin
+    if (netMargin >= clampedMargin) {
+      status = 'safe'
+      message = 'Margem acima do alvo!'
+    } else if (netMargin >= 0) {
+      status = 'warning'
+      message = 'Margem abaixo do alvo'
+    } else {
+      status = 'danger'
+      message = 'Alerta: prejuízo no cenário atual'
+    }
   } else {
-    status = 'danger'
-    message = 'Alerta: risco de prejuízo'
+    // No desired margin set — use absolute thresholds
+    if (netMargin >= 20) {
+      status = 'safe'
+      message = 'Excelente margem de lucro!'
+    } else if (netMargin >= 10) {
+      status = 'warning'
+      message = 'Atenção: margem apertada'
+    } else {
+      status = 'danger'
+      message = 'Alerta: risco de prejuízo'
+    }
   }
 
   return { variableCost, fixedPerJob, totalCost, minimumPrice, maxDiscount, grossMargin, taxAmount, netMargin, status, message }

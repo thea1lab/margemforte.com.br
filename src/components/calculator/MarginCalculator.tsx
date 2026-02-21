@@ -526,6 +526,16 @@ export const MarginCalculator = () => {
           </div>
         </div>
 
+        {/* SEO intro text */}
+        <section className="mb-6">
+          <p className="text-sm text-muted-foreground/80 leading-relaxed max-w-3xl">
+            Calcule a margem de lucro real do seu negócio de forma rápida e gratuita.
+            Inclua custos fixos, variáveis e impostos (MEI, Simples Nacional, Lucro Presumido)
+            para descobrir o preço mínimo de venda, o desconto máximo e o lucro líquido por serviço.
+            Ideal para prestadores de serviço, confeiteiros, artesãos, freelancers e consultores.
+          </p>
+        </section>
+
         {/* Template cards */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
@@ -581,7 +591,7 @@ export const MarginCalculator = () => {
   const minPriceTextClass = minimumPriceDisplay ? getNumberSizeClasses(minimumPriceDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
   const netMarginDisplay = result ? `${result.netMargin.toFixed(2)}%` : ''
   const netMarginTextClass = netMarginDisplay ? getNumberSizeClasses(netMarginDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
-  const maxDiscountDisplay = result && isFinite(result.maxDiscount) ? `${Math.max(0, result.maxDiscount).toFixed(2)}%` : ''
+  const maxDiscountDisplay = result && isFinite(result.maxDiscount) ? `${result.maxDiscount.toFixed(2)}%` : ''
   const maxDiscountTextClass = maxDiscountDisplay ? getNumberSizeClasses(maxDiscountDisplay) : 'text-3xl sm:text-4xl md:text-5xl'
 
   const netProfitValue = result ? (serviceValueNumber - result.totalCost - result.taxAmount) : 0

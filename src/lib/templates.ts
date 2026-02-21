@@ -19,7 +19,7 @@ export const templates: Template[] = [
   {
     id: 'prestador',
     name: 'Prestador de Serviço',
-    description: 'Serviços gerais, manutenção, instalações',
+    description: 'Calcule a margem para serviços gerais, manutenção, instalações e reparos',
     icon: 'Wrench',
     defaultCostItems: [
       { label: 'Deslocamento', type: 'currency' },
@@ -32,7 +32,7 @@ export const templates: Template[] = [
   {
     id: 'confeitaria',
     name: 'Confeitaria / Doces',
-    description: 'Bolos, doces, salgados, encomendas',
+    description: 'Precifique bolos, doces, salgados e encomendas com todos os custos',
     icon: 'CakeSlice',
     defaultCostItems: [
       { label: 'Ingredientes', type: 'currency' },
@@ -46,7 +46,7 @@ export const templates: Template[] = [
   {
     id: 'consultoria',
     name: 'Consultoria',
-    description: 'Consultoria técnica, financeira, empresarial',
+    description: 'Margem de lucro para consultoria técnica, financeira e empresarial',
     icon: 'Briefcase',
     defaultCostItems: [
       { label: 'Deslocamento', type: 'currency' },
@@ -59,7 +59,7 @@ export const templates: Template[] = [
   {
     id: 'artesanal',
     name: 'Produto Artesanal',
-    description: 'Artesanato, bijuterias, costura, crochê',
+    description: 'Precificação para artesanato, bijuterias, costura, crochê e produtos feitos à mão',
     icon: 'Palette',
     defaultCostItems: [
       { label: 'Materiais', type: 'currency' },
@@ -72,7 +72,7 @@ export const templates: Template[] = [
   {
     id: 'freelancer',
     name: 'Freelancer / TI',
-    description: 'Desenvolvimento, design, marketing digital',
+    description: 'Calcule quanto cobrar por projetos de desenvolvimento, design e marketing digital',
     icon: 'Monitor',
     defaultCostItems: [
       { label: 'Ferramentas/Software', type: 'currency' },
@@ -85,7 +85,7 @@ export const templates: Template[] = [
   {
     id: 'personalizado',
     name: 'Personalizado',
-    description: 'Monte seus próprios itens de custo',
+    description: 'Monte seus próprios itens de custo para qualquer tipo de negócio',
     icon: 'Settings',
     defaultCostItems: [],
   },

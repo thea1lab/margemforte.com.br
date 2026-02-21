@@ -1,0 +1,42 @@
+# Margem Forte
+
+> Calculadora gratuita de margem de lucro real para pequenos negócios brasileiros.
+
+## O que é
+
+Margem Forte é uma ferramenta web gratuita que calcula a margem de lucro real de um serviço ou produto, considerando custos fixos, custos variáveis e impostos. Funciona 100% no navegador (client-side), sem cadastro e sem enviar dados a servidores.
+
+## Para quem
+
+- Prestadores de serviço (manutenção, instalações, reparos)
+- Confeiteiros e produtores de alimentos (bolos, doces, salgados)
+- Consultores (técnicos, financeiros, empresariais)
+- Artesãos (bijuterias, costura, crochê, produtos feitos à mão)
+- Freelancers de TI (desenvolvimento, design, marketing digital)
+- MEI e pequenos empresários em geral
+
+## Funcionalidades
+
+- Cálculo de margem bruta e margem líquida
+- Custos variáveis com 3 modos de entrada: valor direto (R$), horas × taxa horária, quantidade × preço unitário
+- Custos fixos mensais com rateio automático por serviço
+- Impostos por regime tributário: MEI (~5%), Simples Nacional Anexo III (~6%), Simples Nacional Anexo V (~15,5%), Lucro Presumido (~16,33%) ou alíquota personalizada
+- Preço mínimo de venda para atingir a margem desejada
+- Desconto máximo sem ficar abaixo da margem-alvo
+- 6 modelos prontos para diferentes tipos de negócio
+- Histórico de simulações salvas no navegador
+- Exportação em CSV, JSON e texto
+
+## Fórmulas principais
+
+- Margem bruta = (Preço - Custo total) / Preço × 100
+- Margem líquida = (Preço - Custo total - Impostos) / Preço × 100
+- Preço mínimo = Custo total / (1 - Margem desejada)
+- Desconto máximo = (Preço atual - Preço mínimo) / Preço atual × 100
+- Markup = (Preço - Custo) / Custo × 100
+
+## Páginas
+
+- Calculadora: https://margemforte.com.br/
+- Perguntas Frequentes: https://margemforte.com.br/faq
+- Histórico de Simulações: https://margemforte.com.br/historico

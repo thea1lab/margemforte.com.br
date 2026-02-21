@@ -174,55 +174,86 @@ describe('combined tax + fixed costs (plan verification)', () => {
   })
 })
 
-// ─── Status thresholds ───────────────────────────────────────────
+// ─── Status thresholds (no desired margin) ──────────────────────
 
-describe('status thresholds (based on net margin)', () => {
+describe('status thresholds (absolute, desiredMargin=0)', () => {
   it('returns "safe" when net margin >= 20%', () => {
-    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 700, taxRate: 0 }))
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 700, taxRate: 0, desiredMargin: 0 }))
     // net = (1000-700)/1000 = 30%
     expect(r.status).toBe('safe')
     expect(r.message).toBe('Excelente margem de lucro!')
   })
 
   it('returns "safe" at exactly 20% net margin', () => {
-    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 800, taxRate: 0 }))
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 800, taxRate: 0, desiredMargin: 0 }))
     // net = (1000-800)/1000 = 20%
     expect(r.status).toBe('safe')
   })
 
   it('returns "warning" when 10% <= net margin < 20%', () => {
-    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 850, taxRate: 0 }))
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 850, taxRate: 0, desiredMargin: 0 }))
     // net = (1000-850)/1000 = 15%
     expect(r.status).toBe('warning')
     expect(r.message).toBe('Atenção: margem apertada')
   })
 
   it('returns "warning" at exactly 10% net margin', () => {
-    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 900, taxRate: 0 }))
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 900, taxRate: 0, desiredMargin: 0 }))
     // net = 10%
     expect(r.status).toBe('warning')
   })
 
   it('returns "danger" when net margin < 10%', () => {
-    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 950, taxRate: 0 }))
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 950, taxRate: 0, desiredMargin: 0 }))
     // net = 5%
     expect(r.status).toBe('danger')
     expect(r.message).toBe('Alerta: risco de prejuízo')
   })
 
   it('returns "danger" for negative net margin', () => {
-    const r = calculateMargin(input({ serviceValue: 100, variableCost: 200, taxRate: 5 }))
+    const r = calculateMargin(input({ serviceValue: 100, variableCost: 200, taxRate: 5, desiredMargin: 0 }))
     expect(r.netMargin).toBeLessThan(0)
     expect(r.status).toBe('danger')
   })
 
   it('tax can push status from safe to warning', () => {
     // Without tax: net = (1000-800)/1000 = 20% → safe
-    const noTax = calculateMargin(input({ serviceValue: 1000, variableCost: 800, taxRate: 0 }))
+    const noTax = calculateMargin(input({ serviceValue: 1000, variableCost: 800, taxRate: 0, desiredMargin: 0 }))
     expect(noTax.status).toBe('safe')
     // With 5% tax: net = (1000-800-50)/1000 = 15% → warning
-    const withTax = calculateMargin(input({ serviceValue: 1000, variableCost: 800, taxRate: 5 }))
+    const withTax = calculateMargin(input({ serviceValue: 1000, variableCost: 800, taxRate: 5, desiredMargin: 0 }))
     expect(withTax.status).toBe('warning')
+  })
+})
+
+// ─── Status relative to desired margin ──────────────────────────
+
+describe('status relative to desired margin', () => {
+  it('returns "safe" when net margin >= desired margin', () => {
+    // net = (1000-400)/1000 = 60%, desired = 30%
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 400, desiredMargin: 30 }))
+    expect(r.status).toBe('safe')
+    expect(r.message).toBe('Margem acima do alvo!')
+  })
+
+  it('returns "warning" when net margin >= 0 but below desired margin', () => {
+    // net = (1000-800)/1000 = 20%, desired = 30%
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 800, desiredMargin: 30 }))
+    expect(r.status).toBe('warning')
+    expect(r.message).toBe('Margem abaixo do alvo')
+  })
+
+  it('returns "danger" when net margin < 0 with desired margin set', () => {
+    // net = (100-200)/100 = -100%, desired = 30%
+    const r = calculateMargin(input({ serviceValue: 100, variableCost: 200, desiredMargin: 30 }))
+    expect(r.status).toBe('danger')
+    expect(r.message).toBe('Alerta: prejuízo no cenário atual')
+  })
+
+  it('returns "safe" at exactly desired margin', () => {
+    // net = (1000-700)/1000 = 30%, desired = 30%
+    const r = calculateMargin(input({ serviceValue: 1000, variableCost: 700, desiredMargin: 30 }))
+    expect(r.status).toBe('safe')
   })
 })
 
@@ -314,9 +345,9 @@ describe('max discount', () => {
     expect(round(r.maxDiscount)).toBe(0)
   })
 
-  it('is negative when service value is below minimum price', () => {
+  it('is clamped to 0 when service value is below minimum price', () => {
     const r = calculateMargin(input({ serviceValue: 100, variableCost: 400, desiredMargin: 30 }))
-    expect(r.maxDiscount).toBeLessThan(0)
+    expect(r.maxDiscount).toBe(0)
   })
 
   it('increases when service value is well above minimum price', () => {
